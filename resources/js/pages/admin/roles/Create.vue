@@ -46,14 +46,6 @@ const handleSubmit = () => {
     });
 };
 
-const togglePermission = (permissionName: string) => {
-    const index = form.permissions.indexOf(permissionName);
-    if (index > -1) {
-        form.permissions.splice(index, 1);
-    } else {
-        form.permissions.push(permissionName);
-    }
-};
 
 // Group permissions by category
 const groupedPermissions = props.permissions.reduce((acc, permission) => {
@@ -139,8 +131,15 @@ const groupedPermissions = props.permissions.reduce((acc, permission) => {
                                         >
                                             <Checkbox
                                                 :id="`permission-${permission.id}`"
-                                                :checked="form.permissions.includes(permission.name)"
-                                                @update:checked="togglePermission(permission.name)"
+                                                :model-value="form.permissions.includes(permission.name)"
+                                                @update:model-value="(checked) => {
+                                                    const index = form.permissions.indexOf(permission.name);
+                                                    if (checked && index === -1) {
+                                                        form.permissions.push(permission.name);
+                                                    } else if (!checked && index > -1) {
+                                                        form.permissions.splice(index, 1);
+                                                    }
+                                                }"
                                             />
                                             <Label
                                                 :for="`permission-${permission.id}`"

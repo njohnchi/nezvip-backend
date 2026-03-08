@@ -56,15 +56,6 @@ const handleSubmit = () => {
         preserveScroll: true,
     });
 };
-
-const toggleRole = (roleName: string) => {
-    const index = form.roles.indexOf(roleName);
-    if (index > -1) {
-        form.roles.splice(index, 1);
-    } else {
-        form.roles.push(roleName);
-    }
-};
 </script>
 
 <template>
@@ -187,8 +178,15 @@ const toggleRole = (roleName: string) => {
                             >
                                 <Checkbox
                                     :id="`role-${role.id}`"
-                                    :checked="form.roles.includes(role.name)"
-                                    @update:checked="toggleRole(role.name)"
+                                    :model-value="form.roles.includes(role.name)"
+                                    @update:model-value="(checked) => {
+                                        const index = form.roles.indexOf(role.name);
+                                        if (checked && index === -1) {
+                                            form.roles.push(role.name);
+                                        } else if (!checked && index > -1) {
+                                            form.roles.splice(index, 1);
+                                        }
+                                    }"
                                 />
                                 <Label
                                     :for="`role-${role.id}`"
