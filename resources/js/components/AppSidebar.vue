@@ -20,17 +20,15 @@ import type { NavItem } from '@/types';
 
 const page = usePage();
 
-const mainNavItems: NavItem[] = [
-    {
-        title: 'Dashboard',
-        href: dashboard(),
-        icon: LayoutGrid,
-    },
-];
-
 // Admin navigation items based on permissions
 const adminNavItems = computed((): NavItem[] => {
-    const items: NavItem[] = [];
+    const items: NavItem[] = [
+        {
+            title: 'Dashboard',
+            href: dashboard(),
+            icon: LayoutGrid,
+        },
+    ];
     const user = page.props.auth?.user as any;
 
     if (!user) return items;
@@ -57,16 +55,6 @@ const adminNavItems = computed((): NavItem[] => {
 });
 
 const footerNavItems: NavItem[] = [
-    {
-        title: 'Repository',
-        href: 'https://github.com/laravel/vue-starter-kit',
-        icon: FolderGit2,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#vue',
-        icon: BookOpen,
-    },
 ];
 </script>
 
@@ -85,7 +73,6 @@ const footerNavItems: NavItem[] = [
         </SidebarHeader>
 
         <SidebarContent>
-            <NavMain :items="mainNavItems" />
             <NavMain v-if="adminNavItems.length > 0" :items="adminNavItems" />
         </SidebarContent>
 
