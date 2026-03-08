@@ -34,6 +34,12 @@ class RolePermissionSeeder extends Seeder
         Permission::create(['name' => 'view permissions']);
         Permission::create(['name' => 'assign permissions']);
 
+        // Create permissions for form management
+        Permission::create(['name' => 'view diagnostics']);
+        Permission::create(['name' => 'manage diagnostics']);
+        Permission::create(['name' => 'view submissions']);
+        Permission::create(['name' => 'manage submissions']);
+
         // Create roles and assign permissions
         $userRole = Role::create(['name' => 'User']);
         // Users have basic access, no special permissions
@@ -45,6 +51,10 @@ class RolePermissionSeeder extends Seeder
             'edit users',
             'view roles',
             'view permissions',
+            'view diagnostics',
+            'manage diagnostics',
+            'view submissions',
+            'manage submissions',
         ]);
 
         $superAdminRole = Role::create(['name' => 'Super Admin']);

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { LayoutGrid, Shield, Users } from 'lucide-vue-next';
+import { BookOpen, ClipboardList, FileText, FolderGit2, LayoutGrid, Shield, Users } from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
@@ -48,6 +48,24 @@ const adminNavItems = computed((): NavItem[] => {
             title: 'Roles',
             href: '/admin/roles',
             icon: Shield,
+        });
+    }
+
+    // Check if user can view diagnostics
+    if (user.permissions?.includes('view diagnostics') || user.roles?.includes('Super Admin')) {
+        items.push({
+            title: 'Diagnostics',
+            href: '/admin/diagnostics',
+            icon: ClipboardList,
+        });
+    }
+
+    // Check if user can view submissions
+    if (user.permissions?.includes('view submissions') || user.roles?.includes('Super Admin')) {
+        items.push({
+            title: 'Submissions',
+            href: '/admin/submissions',
+            icon: FileText,
         });
     }
 
