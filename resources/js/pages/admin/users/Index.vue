@@ -128,10 +128,14 @@ const deleteUser = (userId: number) => {
                             </TableCell>
                             <TableCell>
                                 <DropdownMenu>
-                                    <DropdownMenuTrigger as-child>
+                                    <DropdownMenuTrigger
+                                        as-child
+                                        :disabled="user.roles.some(role => role.name === 'Super Admin')"
+                                    >
                                         <Button
                                             variant="ghost"
                                             size="icon"
+                                            :disabled="user.roles.some(role => role.name === 'Super Admin')"
                                         >
                                             <MoreHorizontal class="h-4 w-4" />
                                         </Button>

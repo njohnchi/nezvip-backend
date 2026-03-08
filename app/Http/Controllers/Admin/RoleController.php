@@ -15,7 +15,10 @@ class RoleController extends Controller
      */
     public function index()
     {
-        $roles = Role::withCount('users')->with('permissions')->get();
+        $roles = Role::where('name', '!=', 'Super Admin')
+            ->withCount('users')
+            ->with('permissions')
+            ->get();
 
         return inertia('admin/roles/Index', [
             'roles' => $roles,
@@ -60,6 +63,11 @@ class RoleController extends Controller
      */
     public function edit(Role $role)
     {
+        // Prevent editing Super Admin role
+        if ($role->name === 'Super Admin') {
+            abort(403, 'Super Admin role cannot be edited.');
+        }
+
         $permissions = Permission::all();
         $role->load('permissions');
 
@@ -74,6 +82,11 @@ class RoleController extends Controller
      */
     public function update(Request $request, Role $role)
     {
+        // Prevent updating Super Admin role
+        if ($role->name === 'Super Admin') {
+            abort(403, 'Super Admin role cannot be modified.');
+        }
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255', Rule::unique('roles')->ignore($role->id)],
             'permissions' => ['nullable', 'array'],

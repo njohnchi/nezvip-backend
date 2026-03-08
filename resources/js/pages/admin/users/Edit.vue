@@ -172,6 +172,15 @@ const toggleRole = (roleName: string) => {
                         </CardHeader>
                         <CardContent class="space-y-4">
                             <div
+                                v-if="user.roles.some(r => r.name === 'Super Admin')"
+                                class="rounded-lg border border-muted bg-muted/50 p-4"
+                            >
+                                <p class="text-sm font-medium">This user has Super Admin role</p>
+                                <p class="text-sm text-muted-foreground">
+                                    Super Admin role cannot be removed or modified.
+                                </p>
+                            </div>
+                            <div
                                 v-for="role in roles"
                                 :key="role.id"
                                 class="flex items-center space-x-2"

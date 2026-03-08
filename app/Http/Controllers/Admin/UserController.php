@@ -29,7 +29,7 @@ class UserController extends Controller
      */
     public function create()
     {
-        $roles = Role::all();
+        $roles = Role::where('name', '!=', 'Super Admin')->get();
 
         return inertia('admin/users/Create', [
             'roles' => $roles,
@@ -68,7 +68,12 @@ class UserController extends Controller
      */
     public function edit(User $user)
     {
-        $roles = Role::all();
+        // Prevent editing users with Super Admin role (unless you are Super Admin)
+        if ($user->hasRole('Super Admin') && !auth()->user()->hasRole('Super Admin')) {
+            abort(403, 'You cannot edit Super Admin users.');
+        }
+
+        $roles = Role::where('name', '!=', 'Super Admin')->get();
         $user->load('roles');
 
         return inertia('admin/users/Edit', [
@@ -82,6 +87,11 @@ class UserController extends Controller
      */
     public function update(Request $request, User $user)
     {
+        // Prevent updating users with Super Admin role (unless you are Super Admin)
+        if ($user->hasRole('Super Admin') && !auth()->user()->hasRole('Super Admin')) {
+            abort(403, 'You cannot edit Super Admin users.');
+        }
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
@@ -114,6 +124,11 @@ class UserController extends Controller
         // Prevent deleting the current user
         if ($user->id === auth()->id()) {
             return back()->with('error', 'You cannot delete your own account.');
+        }
+
+        // Prevent deleting users with Super Admin role
+        if ($user->hasRole('Super Admin')) {
+            return back()->with('error', 'Super Admin users cannot be deleted.');
         }
 
         $user->delete();
