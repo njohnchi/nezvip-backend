@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, ClipboardList, FileText, FolderGit2, LayoutGrid, Shield, Users } from 'lucide-vue-next';
+import { BookOpen, ClipboardList, FileText, LayoutGrid, Shield, Users } from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
@@ -51,6 +51,15 @@ const adminNavItems = computed((): NavItem[] => {
         });
     }
 
+    // Check if user can view insights
+    if (user.permissions?.includes('view insights') || user.roles?.includes('Super Admin')) {
+        items.push({
+            title: 'Insights',
+            href: '/admin/insights',
+            icon: BookOpen,
+        });
+    }
+
     // Check if user can view diagnostics
     if (user.permissions?.includes('view diagnostics') || user.roles?.includes('Super Admin')) {
         items.push({
@@ -72,8 +81,7 @@ const adminNavItems = computed((): NavItem[] => {
     return items;
 });
 
-const footerNavItems: NavItem[] = [
-];
+const footerNavItems: NavItem[] = [];
 </script>
 
 <template>

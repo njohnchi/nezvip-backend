@@ -18,34 +18,34 @@ class RolePermissionSeeder extends Seeder
         // Reset cached roles and permissions
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // Create permissions for user management
-        Permission::create(['name' => 'view users']);
-        Permission::create(['name' => 'create users']);
-        Permission::create(['name' => 'edit users']);
-        Permission::create(['name' => 'delete users']);
+        $permissions = [
+            'view users',
+            'create users',
+            'edit users',
+            'delete users',
+            'view roles',
+            'create roles',
+            'edit roles',
+            'delete roles',
+            'view permissions',
+            'assign permissions',
+            'view diagnostics',
+            'manage diagnostics',
+            'view submissions',
+            'manage submissions',
+            'view insights',
+            'manage insights',
+        ];
 
-        // Create permissions for role management
-        Permission::create(['name' => 'view roles']);
-        Permission::create(['name' => 'create roles']);
-        Permission::create(['name' => 'edit roles']);
-        Permission::create(['name' => 'delete roles']);
-
-        // Create permissions for permission management
-        Permission::create(['name' => 'view permissions']);
-        Permission::create(['name' => 'assign permissions']);
-
-        // Create permissions for form management
-        Permission::create(['name' => 'view diagnostics']);
-        Permission::create(['name' => 'manage diagnostics']);
-        Permission::create(['name' => 'view submissions']);
-        Permission::create(['name' => 'manage submissions']);
+        foreach ($permissions as $permission) {
+            Permission::firstOrCreate(['name' => $permission]);
+        }
 
         // Create roles and assign permissions
-        $userRole = Role::create(['name' => 'User']);
-        // Users have basic access, no special permissions
+        Role::firstOrCreate(['name' => 'User']);
 
-        $adminRole = Role::create(['name' => 'Admin']);
-        $adminRole->givePermissionTo([
+        $adminRole = Role::firstOrCreate(['name' => 'Admin']);
+        $adminRole->syncPermissions([
             'view users',
             'create users',
             'edit users',
@@ -55,17 +55,24 @@ class RolePermissionSeeder extends Seeder
             'manage diagnostics',
             'view submissions',
             'manage submissions',
+            'view insights',
+            'manage insights',
         ]);
 
-        $superAdminRole = Role::create(['name' => 'Super Admin']);
+        $superAdminRole = Role::firstOrCreate(['name' => 'Super Admin']);
         // Super Admin gets all permissions via Gate::before in AppServiceProvider
 
-        // Create a Super Admin user
-        $superAdmin = User::factory()->create([
-            'name' => 'Super Admin',
-            'email' => 'superadmin@nezvip.com',
-            'password' => 'password', // Change this in production!
-        ]);
-        $superAdmin->assignRole($superAdminRole);
+        // Create or update Super Admin user
+        $superAdmin = User::updateOrCreate(
+            ['email' => 'superadmin@nezvip.com'],
+            [
+                'name' => 'Super Admin',
+                'password' => 'password', // Change this in production!
+            ]
+        );
+
+        if (! $superAdmin->hasRole($superAdminRole)) {
+            $superAdmin->assignRole($superAdminRole);
+        }
     }
 }

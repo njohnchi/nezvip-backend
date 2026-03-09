@@ -24,6 +24,8 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'insights_subscribed_at',
+        'insights_subscription_expires_at',
     ];
 
     /**
@@ -49,6 +51,26 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
+            'insights_subscribed_at' => 'datetime',
+            'insights_subscription_expires_at' => 'datetime',
         ];
+    }
+
+    public function hasActiveInsightsSubscription(): bool
+    {
+        if (! $this->insights_subscribed_at) {
+            return false;
+        }
+
+        if (! $this->insights_subscription_expires_at) {
+            return true;
+        }
+
+        return $this->insights_subscription_expires_at->isFuture();
+    }
+
+    public function insights()
+    {
+        return $this->hasMany(Insight::class, 'author_id');
     }
 }

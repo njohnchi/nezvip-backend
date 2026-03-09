@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\FormSubmissionController as AdminFormSubmissionController;
+use App\Http\Controllers\Admin\InsightController as AdminInsightController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VentureDiagnosticController as AdminVentureDiagnosticController;
@@ -24,6 +25,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Roles management
         Route::middleware('can:view roles')->group(function () {
             Route::resource('roles', RoleController::class);
+        });
+
+        // Insights management
+        Route::middleware('can:view insights')->group(function () {
+            Route::resource('insights', AdminInsightController::class)->except(['show']);
         });
 
         // Venture Diagnostics management
