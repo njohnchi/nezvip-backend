@@ -64,9 +64,9 @@ class RolePermissionSeeder extends Seeder
 
         // Create or update Super Admin user
         $superAdmin = User::updateOrCreate(
-            ['email' => 'superadmin@nezvip.com'],
+            ['email' => 'admin@nezvip.com'],
             [
-                'name' => 'Super Admin',
+                'name' => 'Nezvip Admin',
                 'password' => 'password', // Change this in production!
             ]
         );
