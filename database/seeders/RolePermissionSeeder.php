@@ -35,6 +35,7 @@ class RolePermissionSeeder extends Seeder
             'manage submissions',
             'view insights',
             'manage insights',
+            'manage careers',
         ];
 
         foreach ($permissions as $permission) {
@@ -57,6 +58,7 @@ class RolePermissionSeeder extends Seeder
             'manage submissions',
             'view insights',
             'manage insights',
+            'manage careers',
         ]);
 
         $superAdminRole = Role::firstOrCreate(['name' => 'Super Admin']);

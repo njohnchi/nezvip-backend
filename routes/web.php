@@ -1,12 +1,13 @@
 <?php
 
+use App\Http\Controllers\Admin\CareerApplicationController;
+use App\Http\Controllers\Admin\CareerController as AdminCareerController;
 use App\Http\Controllers\Admin\FormSubmissionController as AdminFormSubmissionController;
 use App\Http\Controllers\Admin\InsightController as AdminInsightController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VentureDiagnosticController as AdminVentureDiagnosticController;
 use Illuminate\Support\Facades\Route;
-use Laravel\Fortify\Features;
 
 Route::get('/', function () {
     return redirect(auth()->check() ? '/dashboard' : '/login');
@@ -30,6 +31,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Insights management
         Route::middleware('can:view insights')->group(function () {
             Route::resource('insights', AdminInsightController::class)->except(['show']);
+        });
+
+        // Careers management
+        Route::middleware('can:manage careers')->group(function () {
+            Route::resource('careers', AdminCareerController::class)->except(['show']);
+            Route::prefix('career-applications')->name('career-applications.')->group(function () {
+                Route::get('/', [CareerApplicationController::class, 'index'])->name('index');
+                Route::get('{careerApplication}', [CareerApplicationController::class, 'show'])->name('show');
+                Route::put('{careerApplication}', [CareerApplicationController::class, 'update'])->name('update');
+                Route::delete('{careerApplication}', [CareerApplicationController::class, 'destroy'])->name('destroy');
+            });
         });
 
         // Venture Diagnostics management

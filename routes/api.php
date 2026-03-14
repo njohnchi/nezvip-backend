@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\CareerController;
 use App\Http\Controllers\Api\FormSubmissionController;
 use App\Http\Controllers\Api\InsightController;
 use App\Http\Controllers\Api\VentureDiagnosticController;
@@ -27,4 +28,9 @@ Route::prefix('v1')->group(function () {
         Route::get('insights/subscription/status', [InsightController::class, 'subscriptionStatus']);
         Route::post('insights/subscription/activate', [InsightController::class, 'activateSubscription']);
     });
+
+    // Careers / opportunities
+    Route::get('careers', [CareerController::class, 'index']);
+    Route::get('careers/{career}', [CareerController::class, 'show']);
+    Route::post('careers/{career}/apply', [CareerController::class, 'apply']);
 });

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, ClipboardList, FileText, LayoutGrid, Shield, Users } from 'lucide-vue-next';
+import { BookOpen, Briefcase, ClipboardList, FileText, LayoutGrid, Shield, Users } from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
@@ -57,6 +57,15 @@ const adminNavItems = computed((): NavItem[] => {
             title: 'Insights',
             href: '/admin/insights',
             icon: BookOpen,
+        });
+    }
+
+    // Check if user can manage careers
+    if (user.permissions?.includes('manage careers') || user.roles?.includes('Super Admin')) {
+        items.push({
+            title: 'Careers',
+            href: '/admin/careers',
+            icon: Briefcase,
         });
     }
 
