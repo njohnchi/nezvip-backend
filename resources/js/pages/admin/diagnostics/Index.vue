@@ -65,13 +65,13 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
+const getStatusColor = (status: string): 'default' | 'destructive' | 'outline' | 'secondary' => {
+    const colors: Record<string, 'default' | 'destructive' | 'outline' | 'secondary'> = {
         pending: 'secondary',
         reviewing: 'default',
         approved: 'default',
         rejected: 'destructive',
-        're-architect': 'default',
+        're-architect': 'outline',
         kill: 'destructive',
     };
     return colors[status] || 'secondary';

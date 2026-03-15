@@ -79,12 +79,16 @@ const statusVariant = (status: string): 'default' | 'destructive' | 'outline' | 
     return map[status] ?? 'secondary';
 };
 
-const filterByCareer = (value: string) => {
-    router.get('/admin/career-applications', { career_id: value === 'all' ? undefined : value, status: props.filters.status === 'all' ? undefined : props.filters.status }, { preserveState: true });
+const filterByCareer = (value: unknown) => {
+    const careerId = String(value ?? 'all');
+
+    router.get('/admin/career-applications', { career_id: careerId === 'all' ? undefined : careerId, status: props.filters.status === 'all' ? undefined : props.filters.status }, { preserveState: true });
 };
 
-const filterByStatus = (value: string) => {
-    router.get('/admin/career-applications', { career_id: props.filters.career_id === 'all' ? undefined : props.filters.career_id, status: value === 'all' ? undefined : value }, { preserveState: true });
+const filterByStatus = (value: unknown) => {
+    const status = String(value ?? 'all');
+
+    router.get('/admin/career-applications', { career_id: props.filters.career_id === 'all' ? undefined : props.filters.career_id, status: status === 'all' ? undefined : status }, { preserveState: true });
 };
 
 const removeApplication = (id: number) => {

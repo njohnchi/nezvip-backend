@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\InsightController as AdminInsightController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VentureDiagnosticController as AdminVentureDiagnosticController;
+use App\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -14,7 +15,7 @@ Route::get('/', function () {
 })->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::inertia('dashboard', 'Dashboard')->name('dashboard');
+    Route::get('dashboard', DashboardController::class)->name('dashboard');
 
     // Admin routes - protected by permissions
     Route::prefix('admin')->name('admin.')->group(function () {

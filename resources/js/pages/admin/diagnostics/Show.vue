@@ -117,6 +117,12 @@ const form = useForm({
     recommended_action: props.diagnostic.recommended_action || '',
 });
 
+const updateViabilityScore = (value: string | number) => {
+    const normalizedValue = String(value).trim();
+
+    form.viability_score = normalizedValue === '' ? null : Number(normalizedValue);
+};
+
 const handleSubmit = () => {
     form.put(`/admin/diagnostics/${props.diagnostic.id}`, {
         preserveScroll: true,
@@ -477,7 +483,8 @@ const formatDate = (dateString: string) => {
                                     <Label for="viability_score">Viability Score (0-100)</Label>
                                     <Input
                                         id="viability_score"
-                                        v-model.number="form.viability_score"
+                                        :model-value="form.viability_score ?? ''"
+                                        @update:model-value="updateViabilityScore"
                                         type="number"
                                         min="0"
                                         max="100"
