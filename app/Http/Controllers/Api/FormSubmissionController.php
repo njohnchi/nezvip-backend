@@ -3,12 +3,16 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\EmailTemplate;
 use App\Models\FormSubmission;
+use App\Services\AcknowledgementEmailService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class FormSubmissionController extends Controller
 {
+    public function __construct(public AcknowledgementEmailService $acknowledgementEmailService) {}
+
     private function getValidationRules(string $formType): array
     {
         $rules = [
@@ -159,14 +163,49 @@ class FormSubmissionController extends Controller
         ];
 
         $prefix = $references[$formType] ?? 'FS';
+        $reference = $prefix.'-'.str_pad($submission->id, 6, '0', STR_PAD_LEFT);
+        $submissionData = $request->input('data', []);
+        $recipientEmail = (string) ($submissionData['email'] ?? '');
+
+        if ($recipientEmail !== '') {
+            $this->acknowledgementEmailService->send(
+                EmailTemplate::FORM_SUBMISSION_ACKNOWLEDGEMENT,
+                $recipientEmail,
+                [
+                    'name' => (string) ($submissionData['full_name'] ?? $recipientEmail),
+                    'reference' => $reference,
+                    'form_type' => $formType,
+                    'form_type_label' => $this->formTypeLabel($formType),
+                    'submitted_at' => $submission->created_at->toDayDateTimeString(),
+                    'app_name' => config('app.name'),
+                ],
+            );
+        }
 
         return response()->json([
             'success' => true,
             'message' => 'Form submitted successfully',
             'data' => [
                 'id' => $submission->id,
-                'reference' => $prefix . '-' . str_pad($submission->id, 6, '0', STR_PAD_LEFT),
+                'reference' => $reference,
             ],
         ], 201);
+    }
+
+    private function formTypeLabel(string $formType): string
+    {
+        return match ($formType) {
+            'scope_review' => 'Scope Review',
+            'institutional_brief' => 'Institutional Brief',
+            'licensing_review' => 'Licensing Review',
+            'investor_brief' => 'Investor Brief',
+            'production_partner' => 'Production Partner',
+            'distribution_partner' => 'Distribution Partner',
+            'insights_subscribe' => 'Insights Subscription',
+            'insights_request_report' => 'Insight Report Request',
+            'media_inquiry' => 'Media Inquiry',
+            'career_application' => 'Career Application',
+            default => str($formType)->replace('_', ' ')->title()->toString(),
+        };
     }
 }

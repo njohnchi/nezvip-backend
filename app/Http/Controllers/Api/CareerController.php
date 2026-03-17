@@ -5,11 +5,15 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Career;
 use App\Models\CareerApplication;
+use App\Models\EmailTemplate;
+use App\Services\AcknowledgementEmailService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class CareerController extends Controller
 {
+    public function __construct(public AcknowledgementEmailService $acknowledgementEmailService) {}
+
     public function index(): JsonResponse
     {
         $careers = Career::query()
@@ -69,12 +73,25 @@ class CareerController extends Controller
             'profile_link' => ['required', 'url', 'max:2048'],
         ]);
 
-        CareerApplication::create([
+        $application = CareerApplication::create([
             ...$validated,
             'career_id' => $career->id,
             'role_applied_for' => "{$career->role_title} — {$career->venture_name}",
             'status' => 'pending',
         ]);
+
+        $this->acknowledgementEmailService->send(
+            EmailTemplate::CAREER_APPLICATION_ACKNOWLEDGEMENT,
+            $application->email,
+            [
+                'name' => $application->full_name,
+                'reference' => 'CA-'.str_pad($application->id, 6, '0', STR_PAD_LEFT),
+                'role_title' => $career->role_title,
+                'venture_name' => $career->venture_name,
+                'submitted_at' => $application->created_at->toDayDateTimeString(),
+                'app_name' => config('app.name'),
+            ],
+        );
 
         return response()->json([
             'success' => true,

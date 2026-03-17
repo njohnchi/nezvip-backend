@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, Briefcase, ClipboardList, FileText, LayoutGrid, Shield, Users } from 'lucide-vue-next';
+import { BookOpen, Briefcase, ClipboardList, FileText, LayoutGrid, Mail, Shield, Users } from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
@@ -57,6 +57,14 @@ const adminNavItems = computed((): NavItem[] => {
             title: 'Insights',
             href: '/admin/insights',
             icon: BookOpen,
+        });
+    }
+
+    if (user.permissions?.includes('manage email templates') || user.roles?.includes('Super Admin')) {
+        items.push({
+            title: 'Email Templates',
+            href: '/admin/email-templates',
+            icon: Mail,
         });
     }
 

@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\EmailTemplate;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
@@ -36,6 +37,7 @@ class RolePermissionSeeder extends Seeder
             'view insights',
             'manage insights',
             'manage careers',
+            'manage email templates',
         ];
 
         foreach ($permissions as $permission) {
@@ -59,6 +61,7 @@ class RolePermissionSeeder extends Seeder
             'view insights',
             'manage insights',
             'manage careers',
+            'manage email templates',
         ]);
 
         $superAdminRole = Role::firstOrCreate(['name' => 'Super Admin']);
@@ -76,5 +79,7 @@ class RolePermissionSeeder extends Seeder
         if (! $superAdmin->hasRole($superAdminRole)) {
             $superAdmin->assignRole($superAdminRole);
         }
+
+        EmailTemplate::ensureDefaults();
     }
 }

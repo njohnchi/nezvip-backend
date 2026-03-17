@@ -3,12 +3,16 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\EmailTemplate;
 use App\Models\VentureDiagnostic;
+use App\Services\AcknowledgementEmailService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class VentureDiagnosticController extends Controller
 {
+    public function __construct(public AcknowledgementEmailService $acknowledgementEmailService) {}
+
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -93,13 +97,27 @@ class VentureDiagnosticController extends Controller
         }
 
         $diagnostic = VentureDiagnostic::create($validator->validated());
+        $reference = 'VD-'.str_pad($diagnostic->id, 6, '0', STR_PAD_LEFT);
+
+        $this->acknowledgementEmailService->send(
+            EmailTemplate::VENTURE_DIAGNOSTIC_ACKNOWLEDGEMENT,
+            $diagnostic->email,
+            [
+                'name' => $diagnostic->full_name,
+                'reference' => $reference,
+                'venture_name' => $diagnostic->venture_name,
+                'intake_type' => $diagnostic->intake_type,
+                'submitted_at' => $diagnostic->created_at->toDayDateTimeString(),
+                'app_name' => config('app.name'),
+            ],
+        );
 
         return response()->json([
             'success' => true,
             'message' => 'Venture diagnostic submitted successfully',
             'data' => [
                 'id' => $diagnostic->id,
-                'reference' => 'VD-' . str_pad($diagnostic->id, 6, '0', STR_PAD_LEFT),
+                'reference' => $reference,
             ],
         ], 201);
     }

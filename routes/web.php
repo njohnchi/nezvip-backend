@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\CareerApplicationController;
 use App\Http\Controllers\Admin\CareerController as AdminCareerController;
+use App\Http\Controllers\Admin\EmailTemplateController;
 use App\Http\Controllers\Admin\FormSubmissionController as AdminFormSubmissionController;
 use App\Http\Controllers\Admin\InsightController as AdminInsightController;
 use App\Http\Controllers\Admin\RoleController;
@@ -32,6 +33,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Insights management
         Route::middleware('can:view insights')->group(function () {
             Route::resource('insights', AdminInsightController::class)->except(['show']);
+        });
+
+        // Email template management
+        Route::middleware('can:manage email templates')->group(function () {
+            Route::resource('email-templates', EmailTemplateController::class)->only(['index', 'edit', 'update']);
         });
 
         // Careers management
