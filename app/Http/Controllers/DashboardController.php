@@ -215,7 +215,6 @@ class DashboardController extends Controller
                 'reviewing' => VentureDiagnostic::query()->where('status', 'reviewing')->count(),
                 'approved' => VentureDiagnostic::query()->where('status', 'approved')->count(),
                 'rejected' => VentureDiagnostic::query()->where('status', 'rejected')->count(),
-                'average_score' => round((float) VentureDiagnostic::query()->whereNotNull('viability_score')->avg('viability_score'), 1),
             ];
 
             $pipelines['diagnostics'] = [
@@ -306,14 +305,6 @@ class DashboardController extends Controller
                 'title' => 'Premium content mix',
                 'value' => $premiumShare.'%',
                 'description' => $insightTotals['premium'].' of '.$insightTotals['total'].' insights are marked premium.',
-            ];
-        }
-
-        if ($diagnosticTotals !== null && $diagnosticTotals['average_score'] > 0) {
-            $highlights['diagnostic_score'] = [
-                'title' => 'Average diagnostic score',
-                'value' => $diagnosticTotals['average_score'].'/100',
-                'description' => 'Average viability score across reviewed venture diagnostics.',
             ];
         }
 
@@ -481,19 +472,7 @@ class DashboardController extends Controller
 
     private function formTypeLabel(string $formType): string
     {
-        return match ($formType) {
-            'scope_review' => 'Scope Review',
-            'institutional_brief' => 'Institutional Brief',
-            'licensing_review' => 'Licensing Review',
-            'investor_brief' => 'Investor Brief',
-            'production_partner' => 'Production Partner',
-            'distribution_partner' => 'Distribution Partner',
-            'insights_subscribe' => 'Newsletter',
-            'insights_request_report' => 'Report Request',
-            'media_inquiry' => 'Media Inquiry',
-            'career_application' => 'Career Application',
-            default => str($formType)->replace('_', ' ')->title()->toString(),
-        };
+        return FormSubmission::labelFor($formType);
     }
 
     private function reviewQueueHref(array $permissions): ?string

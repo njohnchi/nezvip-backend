@@ -13,6 +13,7 @@ import type { BreadcrumbItem } from '@/types';
 interface Reviewer { id: number; name: string; }
 interface Submission {
     id: number; form_type: string; status: string; data: Record<string, any>;
+    case_reference: string | null; operator_assisted: boolean;
     admin_notes: string | null; created_at: string; reviewed_at: string | null; reviewer: Reviewer | null;
 }
 interface Props { submission: Submission; }
@@ -34,10 +35,21 @@ const getFormTypeLabel = (t: string) => {
         licensing_review: 'Licensing Review', investor_brief: 'Investor Brief',
         production_partner: 'Production Partner', distribution_partner: 'Distribution Partner',
         insights_subscribe: 'Newsletter', insights_request_report: 'Report Request',
-        media_inquiry: 'Media Inquiry', career_application: 'Career Application'
+        media_inquiry: 'Media Inquiry', career_application: 'Career Application',
+        venture_deconstruction: 'Venture Deconstruction', venture_orientation: 'Strategic Venture Orientation',
+        venture_synthesis: 'Venture Synthesis', venture_architecture_request: 'Venture Architecture Request',
+        program_brief_request: 'Program Brief Request', retainer_request: 'Retainer Request',
     };
     return labels[t] || t;
 };
+const referencePrefixes: Record<string, string> = {
+    scope_review: 'SR', institutional_brief: 'IB', licensing_review: 'LR', investor_brief: 'INV',
+    production_partner: 'PP', distribution_partner: 'DP', insights_subscribe: 'IS',
+    insights_request_report: 'IRR', media_inquiry: 'MI', career_application: 'CA',
+    venture_deconstruction: 'VDS', venture_orientation: 'VO', venture_synthesis: 'SYN',
+    venture_architecture_request: 'VA', program_brief_request: 'PBR', retainer_request: 'RTR',
+};
+const getReference = (s: Submission) => `${referencePrefixes[s.form_type] || 'FS'}-${String(s.id).padStart(6, '0')}`;
 const renderValue = (v: any): string => Array.isArray(v) ? v.join(', ') : typeof v === 'object' && v !== null ? JSON.stringify(v, null, 2) : String(v);
 const formatFieldName = (k: string) => k.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 </script>
@@ -56,6 +68,7 @@ const formatFieldName = (k: string) => k.split('_').map(w => w.charAt(0).toUpper
                 <div class="flex items-center gap-2">
                     <Badge>{{ getFormTypeLabel(submission.form_type) }}</Badge>
                     <Badge :variant="submission.status === 'contacted' ? 'default' : 'secondary'">{{ submission.status }}</Badge>
+                    <Badge v-if="submission.operator_assisted" variant="outline">Operator-assisted</Badge>
                     <Button variant="destructive" size="icon" @click="deleteSubmission"><Trash2 class="h-4 w-4" /></Button>
                 </div>
             </div>
@@ -64,6 +77,16 @@ const formatFieldName = (k: string) => k.split('_').map(w => w.charAt(0).toUpper
                     <Card>
                         <CardHeader><CardTitle>Submission Data</CardTitle><CardDescription>All information provided</CardDescription></CardHeader>
                         <CardContent>
+                            <div class="mb-4 grid gap-2 rounded-md border border-border bg-muted/40 p-4 text-sm sm:grid-cols-2">
+                                <div>
+                                    <Label class="text-muted-foreground">Reference</Label>
+                                    <p class="font-medium">{{ getReference(submission) }}</p>
+                                </div>
+                                <div>
+                                    <Label class="text-muted-foreground">Case Reference</Label>
+                                    <p class="font-medium">{{ submission.case_reference || '—' }}</p>
+                                </div>
+                            </div>
                             <div class="space-y-4">
                                 <div v-for="(value, key) in submission.data" :key="key" class="border-b pb-4 last:border-0">
                                     <Label class="text-muted-foreground">{{ formatFieldName(String(key)) }}</Label>

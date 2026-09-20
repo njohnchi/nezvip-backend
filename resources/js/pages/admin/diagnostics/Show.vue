@@ -4,7 +4,6 @@ import { ArrowLeft, Trash2 } from 'lucide-vue-next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
     Select,
@@ -82,7 +81,6 @@ interface Diagnostic {
     proof_links: string[];
     // Assessment
     admin_notes: string | null;
-    viability_score: number | null;
     recommended_action: string | null;
     reviewed_at: string | null;
     reviewer: Reviewer | null;
@@ -113,15 +111,8 @@ const breadcrumbs: BreadcrumbItem[] = [
 const form = useForm({
     status: props.diagnostic.status,
     admin_notes: props.diagnostic.admin_notes || '',
-    viability_score: props.diagnostic.viability_score,
     recommended_action: props.diagnostic.recommended_action || '',
 });
-
-const updateViabilityScore = (value: string | number) => {
-    const normalizedValue = String(value).trim();
-
-    form.viability_score = normalizedValue === '' ? null : Number(normalizedValue);
-};
 
 const handleSubmit = () => {
     form.put(`/admin/diagnostics/${props.diagnostic.id}`, {
@@ -476,22 +467,6 @@ const formatDate = (dateString: string) => {
                                     </Select>
                                     <p v-if="form.errors.status" class="text-sm text-destructive">
                                         {{ form.errors.status }}
-                                    </p>
-                                </div>
-
-                                <div class="space-y-2">
-                                    <Label for="viability_score">Viability Score (0-100)</Label>
-                                    <Input
-                                        id="viability_score"
-                                        :model-value="form.viability_score ?? ''"
-                                        @update:model-value="updateViabilityScore"
-                                        type="number"
-                                        min="0"
-                                        max="100"
-                                        placeholder="Enter score"
-                                    />
-                                    <p v-if="form.errors.viability_score" class="text-sm text-destructive">
-                                        {{ form.errors.viability_score }}
                                     </p>
                                 </div>
 

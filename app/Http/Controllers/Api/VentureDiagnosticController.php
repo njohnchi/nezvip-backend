@@ -6,12 +6,16 @@ use App\Http\Controllers\Controller;
 use App\Models\EmailTemplate;
 use App\Models\VentureDiagnostic;
 use App\Services\AcknowledgementEmailService;
+use App\Services\TeamNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class VentureDiagnosticController extends Controller
 {
-    public function __construct(public AcknowledgementEmailService $acknowledgementEmailService) {}
+    public function __construct(
+        public AcknowledgementEmailService $acknowledgementEmailService,
+        public TeamNotificationService $teamNotificationService,
+    ) {}
 
     public function store(Request $request)
     {
@@ -87,6 +91,11 @@ class VentureDiagnosticController extends Controller
             'consent_packet_only' => 'required|accepted',
             'consent_no_trade_secrets' => 'required|accepted',
             'consent_diagnosis_outcomes' => 'required|accepted',
+
+            // Case linkage & intake assistance
+            'case_reference' => 'nullable|string|max:60',
+            'operator_assisted' => 'sometimes|boolean',
+            'assisted_intake_key' => 'sometimes|string',
         ]);
 
         if ($validator->fails()) {
@@ -97,7 +106,12 @@ class VentureDiagnosticController extends Controller
         }
 
         $diagnostic = VentureDiagnostic::create($validator->validated());
-        $reference = 'VD-'.str_pad($diagnostic->id, 6, '0', STR_PAD_LEFT);
+        $diagnostic->forceFill([
+            'case_reference' => $this->resolveCaseReference($request, $diagnostic),
+            'operator_assisted' => $this->isOperatorAssisted($request),
+        ])->save();
+
+        $reference = $diagnostic->reference;
 
         $this->acknowledgementEmailService->send(
             EmailTemplate::VENTURE_DIAGNOSTIC_ACKNOWLEDGEMENT,
@@ -112,13 +126,60 @@ class VentureDiagnosticController extends Controller
             ],
         );
 
+        $this->teamNotificationService->notify(
+            'New Venture Diagnostic submission ('.$reference.')',
+            $this->teamNotificationMessage($reference, $diagnostic),
+        );
+
         return response()->json([
             'success' => true,
             'message' => 'Venture diagnostic submitted successfully',
             'data' => [
                 'id' => $diagnostic->id,
                 'reference' => $reference,
+                'case_reference' => $diagnostic->case_reference,
             ],
         ], 201);
+    }
+
+    private function resolveCaseReference(Request $request, VentureDiagnostic $diagnostic): ?string
+    {
+        $candidate = (string) ($request->input('case_reference') ?? '');
+
+        if ($candidate === '') {
+            return $diagnostic->reference;
+        }
+
+        $candidate = strtoupper(trim($candidate));
+
+        return $candidate !== '' ? $candidate : $diagnostic->reference;
+    }
+
+    private function isOperatorAssisted(Request $request): bool
+    {
+        if (! $request->boolean('operator_assisted')) {
+            return false;
+        }
+
+        $key = (string) config('nezvip.assisted_intake_key');
+
+        if ($key === '') {
+            return false;
+        }
+
+        return hash_equals($key, (string) $request->input('assisted_intake_key', ''));
+    }
+
+    private function teamNotificationMessage(string $reference, VentureDiagnostic $diagnostic): string
+    {
+        return implode("\n", [
+            'VENTURE DIAGNOSTIC',
+            'Reference: '.$reference,
+            'Name: '.$diagnostic->full_name,
+            'Email: '.$diagnostic->email,
+            'Venture: '.$diagnostic->venture_name,
+            '',
+            'A new diagnostic is awaiting review in the admin diagnostics area.',
+        ]);
     }
 }

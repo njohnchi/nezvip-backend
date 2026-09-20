@@ -131,13 +131,11 @@ test('dashboard shows admin summaries analytics and recent activity for authoriz
     VentureDiagnostic::query()->create(ventureDiagnosticPayload([
         'venture_name' => 'Pending Venture',
         'status' => 'pending',
-        'viability_score' => null,
     ]));
 
     VentureDiagnostic::query()->create(ventureDiagnosticPayload([
         'venture_name' => 'Approved Venture',
         'status' => 'approved',
-        'viability_score' => 88,
     ]));
 
     $response = $this->actingAs($admin)->get(route('dashboard'));
@@ -227,11 +225,9 @@ function ventureDiagnosticPayload(array $overrides = []): array
         'consent_no_trade_secrets' => true,
         'consent_diagnosis_outcomes' => true,
         'admin_notes' => null,
-        'viability_score' => null,
         'risk_assessment' => null,
         'recommended_action' => null,
         'reviewed_at' => null,
         'reviewed_by' => null,
     ], $overrides);
 }
-

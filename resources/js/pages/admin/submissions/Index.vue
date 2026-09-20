@@ -97,6 +97,12 @@ const getFormTypeLabel = (formType: string) => {
         insights_request_report: 'Report Request',
         media_inquiry: 'Media Inquiry',
         career_application: 'Career Application',
+        venture_deconstruction: 'Venture Deconstruction',
+        venture_orientation: 'Strategic Venture Orientation',
+        venture_synthesis: 'Venture Synthesis',
+        venture_architecture_request: 'Venture Architecture Request',
+        program_brief_request: 'Program Brief Request',
+        retainer_request: 'Retainer Request',
     };
     return labels[formType] || formType;
 };

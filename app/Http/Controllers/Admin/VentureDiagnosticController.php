@@ -40,7 +40,6 @@ class VentureDiagnosticController extends Controller
         $validated = $request->validate([
             'status' => 'required|in:pending,reviewing,approved,rejected,re-architect,kill',
             'admin_notes' => 'nullable|string',
-            'viability_score' => 'nullable|integer|min:0|max:100',
             'risk_assessment' => 'nullable|array',
             'recommended_action' => 'nullable|string',
         ]);

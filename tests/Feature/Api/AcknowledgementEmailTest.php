@@ -61,6 +61,8 @@ it('sends acknowledgement email for career applications', function () {
 it('does not send form acknowledgement when the template is inactive', function () {
     Mail::fake();
 
+    config(['nezvip.team_notification_enabled' => false]);
+
     EmailTemplate::ensureDefaults();
 
     EmailTemplate::query()

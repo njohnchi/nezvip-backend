@@ -13,6 +13,10 @@ class EmailTemplate extends Model
 
     public const FORM_SUBMISSION_ACKNOWLEDGEMENT = 'form_submission_acknowledgement';
 
+    public const VENTURE_DECONSTRUCTION_ACKNOWLEDGEMENT = 'venture_deconstruction_acknowledgement';
+
+    public const VENTURE_SYNTHESIS_ACKNOWLEDGEMENT = 'venture_synthesis_acknowledgement';
+
     public const VENTURE_DIAGNOSTIC_ACKNOWLEDGEMENT = 'venture_diagnostic_acknowledgement';
 
     public const CAREER_APPLICATION_ACKNOWLEDGEMENT = 'career_application_acknowledgement';
@@ -63,6 +67,34 @@ class EmailTemplate extends Model
                     'reference',
                     'form_type',
                     'form_type_label',
+                    'submitted_at',
+                    'app_name',
+                ],
+            ],
+            [
+                'key' => self::VENTURE_DECONSTRUCTION_ACKNOWLEDGEMENT,
+                'name' => 'Venture Deconstruction Acknowledgement',
+                'description' => 'Sent after a Venture Deconstruction free intake is received.',
+                'subject' => 'Venture Deconstruction received ({{reference}})',
+                'body' => "Hello {{name}},\n\nThank you for your free Venture Deconstruction intake.\n\nReference: {{reference}}\nSubmitted: {{submitted_at}}\n\nYour Venture Deconstruction Result will be returned to this email address once reviewed.\n\nRegards,\n{{app_name}} Team",
+                'is_active' => true,
+                'available_variables' => [
+                    'name',
+                    'reference',
+                    'submitted_at',
+                    'app_name',
+                ],
+            ],
+            [
+                'key' => self::VENTURE_SYNTHESIS_ACKNOWLEDGEMENT,
+                'name' => 'Venture Synthesis Acknowledgement',
+                'description' => 'Sent after a Venture Synthesis intake is submitted.',
+                'subject' => 'Venture Synthesis received ({{reference}})',
+                'body' => "Hello {{name}},\n\nThank you for your Venture Synthesis intake.\n\nReference: {{reference}}\nSubmitted: {{submitted_at}}\n\nDelivery schedule is confirmed after the submitted material is reviewed.\n\nRegards,\n{{app_name}} Team",
+                'is_active' => true,
+                'available_variables' => [
+                    'name',
+                    'reference',
                     'submitted_at',
                     'app_name',
                 ],

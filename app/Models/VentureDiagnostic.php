@@ -49,8 +49,11 @@ class VentureDiagnostic extends Model
         // Consents
         'consent_packet_only', 'consent_no_trade_secrets', 'consent_diagnosis_outcomes',
 
+        // Case linkage & intake assistance
+        'case_reference', 'operator_assisted',
+
         // Assessment
-        'admin_notes', 'viability_score', 'risk_assessment', 'recommended_action',
+        'admin_notes', 'risk_assessment', 'recommended_action',
         'reviewed_at', 'reviewed_by',
     ];
 
@@ -61,11 +64,17 @@ class VentureDiagnostic extends Model
         'consent_packet_only' => 'boolean',
         'consent_no_trade_secrets' => 'boolean',
         'consent_diagnosis_outcomes' => 'boolean',
+        'operator_assisted' => 'boolean',
         'reviewed_at' => 'datetime',
     ];
 
     public function reviewer()
     {
         return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    public function getReferenceAttribute(): string
+    {
+        return 'VD-'.str_pad((string) $this->id, 6, '0', STR_PAD_LEFT);
     }
 }

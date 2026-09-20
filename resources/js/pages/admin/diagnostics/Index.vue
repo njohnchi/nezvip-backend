@@ -27,7 +27,6 @@ interface Diagnostic {
     email: string;
     status: string;
     intake_type: string;
-    viability_score: number | null;
     created_at: string;
     reviewed_at: string | null;
     reviewer: Reviewer | null;
@@ -167,7 +166,6 @@ const formatDate = (dateString: string) => {
                                 <TableHead>Submitter</TableHead>
                                 <TableHead>Type</TableHead>
                                 <TableHead>Status</TableHead>
-                                <TableHead>Score</TableHead>
                                 <TableHead>Submitted</TableHead>
                                 <TableHead class="w-20">Actions</TableHead>
                             </TableRow>
@@ -193,12 +191,6 @@ const formatDate = (dateString: string) => {
                                     <Badge :variant="getStatusColor(diagnostic.status)">
                                         {{ diagnostic.status }}
                                     </Badge>
-                                </TableCell>
-                                <TableCell>
-                                    <span v-if="diagnostic.viability_score" class="font-medium">
-                                        {{ diagnostic.viability_score }}/100
-                                    </span>
-                                    <span v-else class="text-muted-foreground">—</span>
                                 </TableCell>
                                 <TableCell>
                                     {{ formatDate(diagnostic.created_at) }}
