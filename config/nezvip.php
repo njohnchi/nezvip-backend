@@ -29,4 +29,21 @@ return [
     */
 
     'assisted_intake_key' => env('NEZVIP_ASSISTED_INTAKE_KEY'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Case continuity
+    |--------------------------------------------------------------------------
+    |
+    | Returning clients verify ownership of an email address through a
+    | short-lived magic link before any prior undertaking data is shown.
+    | The link points at the public frontend continuation route.
+    |
+    */
+
+    'frontend_url' => env('NEZVIP_FRONTEND_URL', 'http://localhost:8080'),
+
+    'case_link_ttl_minutes' => (int) env('NEZVIP_CASE_LINK_TTL_MINUTES', 30),
+
+    'case_link_route' => env('NEZVIP_CASE_LINK_ROUTE', '/continue-case'),
 ];

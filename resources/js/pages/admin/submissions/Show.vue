@@ -11,12 +11,16 @@ import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItem } from '@/types';
 interface Reviewer { id: number; name: string; }
+interface RelatedRecord {
+    kind: 'submission' | 'diagnostic'; id: number; label: string;
+    reference: string; status: string; created_at: string | null;
+}
 interface Submission {
     id: number; form_type: string; status: string; data: Record<string, any>;
     case_reference: string | null; operator_assisted: boolean;
     admin_notes: string | null; created_at: string; reviewed_at: string | null; reviewer: Reviewer | null;
 }
-interface Props { submission: Submission; }
+interface Props { submission: Submission; related: RelatedRecord[]; }
 const props = defineProps<Props>();
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -93,6 +97,23 @@ const formatFieldName = (k: string) => k.split('_').map(w => w.charAt(0).toUpper
                                     <p class="mt-1 whitespace-pre-wrap">{{ renderValue(value) }}</p>
                                 </div>
                             </div>
+                        </CardContent>
+                    </Card>
+                    <Card v-if="related.length" class="mt-6">
+                        <CardHeader>
+                            <CardTitle>Related Records</CardTitle>
+                            <CardDescription>Other submissions sharing this case reference</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <ul class="space-y-3">
+                                <li v-for="record in related" :key="`${record.kind}-${record.id}`" class="flex items-center justify-between gap-4 border-b pb-3 last:border-0 last:pb-0">
+                                    <div>
+                                        <p class="font-medium">{{ record.label }}</p>
+                                        <p class="text-sm text-muted-foreground">{{ record.reference }} · {{ formatDate(record.created_at || '') }}</p>
+                                    </div>
+                                    <Badge variant="secondary">{{ record.status }}</Badge>
+                                </li>
+                            </ul>
                         </CardContent>
                     </Card>
                 </div>

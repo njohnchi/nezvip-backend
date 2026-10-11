@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\CareerController;
+use App\Http\Controllers\Api\CaseController;
+use App\Http\Controllers\Api\FormDraftController;
 use App\Http\Controllers\Api\FormSubmissionController;
 use App\Http\Controllers\Api\InsightController;
 use App\Http\Controllers\Api\VentureDiagnosticController;
@@ -18,6 +20,17 @@ Route::prefix('v1')->group(function () {
 
     // General form submissions (all other forms)
     Route::post('form-submission', [FormSubmissionController::class, 'store']);
+
+    // Case continuity: magic-link verified discovery of prior undertakings
+    Route::post('cases/request-link', [CaseController::class, 'requestLink'])
+        ->middleware('throttle:6,1');
+    Route::get('cases', [CaseController::class, 'index']);
+    Route::get('cases/{caseReference}/prefill', [CaseController::class, 'prefill']);
+
+    // In-progress form drafts (autosave & resume)
+    Route::post('form-drafts', [FormDraftController::class, 'store']);
+    Route::get('form-drafts', [FormDraftController::class, 'index']);
+    Route::get('form-drafts/{draftReference}', [FormDraftController::class, 'show']);
 
     // Insights/blog feed
     Route::get('insights', [InsightController::class, 'index']);

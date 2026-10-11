@@ -85,10 +85,23 @@ interface Diagnostic {
     reviewed_at: string | null;
     reviewer: Reviewer | null;
     created_at: string;
+    // Case linkage
+    case_reference: string | null;
+    operator_assisted: boolean;
+}
+
+interface RelatedRecord {
+    kind: 'submission' | 'diagnostic';
+    id: number;
+    label: string;
+    reference: string;
+    status: string;
+    created_at: string | null;
 }
 
 interface Props {
     diagnostic: Diagnostic;
+    related: RelatedRecord[];
 }
 
 const props = defineProps<Props>();
@@ -201,6 +214,39 @@ const formatDate = (dateString: string) => {
                                 <Label class="text-muted-foreground">Role</Label>
                                 <p class="font-medium">{{ diagnostic.role_title }}</p>
                             </div>
+                            <div>
+                                <Label class="text-muted-foreground">Reference</Label>
+                                <p class="font-medium">VD-{{ String(diagnostic.id).padStart(6, '0') }}</p>
+                            </div>
+                            <div>
+                                <Label class="text-muted-foreground">Case Reference</Label>
+                                <p class="font-medium">{{ diagnostic.case_reference || '—' }}</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <!-- Related Records -->
+                    <Card v-if="related.length">
+                        <CardHeader>
+                            <CardTitle>Related Records</CardTitle>
+                            <CardDescription>Other records sharing this case reference</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <ul class="space-y-3">
+                                <li
+                                    v-for="record in related"
+                                    :key="`${record.kind}-${record.id}`"
+                                    class="flex items-center justify-between gap-4 border-b pb-3 last:border-0 last:pb-0"
+                                >
+                                    <div>
+                                        <p class="font-medium">{{ record.label }}</p>
+                                        <p class="text-sm text-muted-foreground">
+                                            {{ record.reference }} · {{ formatDate(record.created_at || '') }}
+                                        </p>
+                                    </div>
+                                    <Badge variant="secondary">{{ record.status }}</Badge>
+                                </li>
+                            </ul>
                         </CardContent>
                     </Card>
 

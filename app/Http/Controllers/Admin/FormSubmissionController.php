@@ -4,10 +4,15 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\FormSubmission;
+use App\Services\CaseDiscoveryService;
 use Illuminate\Http\Request;
 
 class FormSubmissionController extends Controller
 {
+    public function __construct(
+        public CaseDiscoveryService $caseDiscoveryService,
+    ) {}
+
     public function index(Request $request)
     {
         $query = FormSubmission::with('reviewer')->latest();
@@ -49,6 +54,9 @@ class FormSubmissionController extends Controller
 
         return inertia('admin/submissions/Show', [
             'submission' => $submission,
+            'related' => $submission->case_reference
+                ? $this->caseDiscoveryService->relatedRecords($submission->case_reference, excludeSubmissionId: $submission->id)
+                : [],
         ]);
     }
 

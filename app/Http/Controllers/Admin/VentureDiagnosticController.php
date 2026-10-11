@@ -4,10 +4,15 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\VentureDiagnostic;
+use App\Services\CaseDiscoveryService;
 use Illuminate\Http\Request;
 
 class VentureDiagnosticController extends Controller
 {
+    public function __construct(
+        public CaseDiscoveryService $caseDiscoveryService,
+    ) {}
+
     public function index()
     {
         $diagnostics = VentureDiagnostic::with('reviewer')
@@ -32,6 +37,9 @@ class VentureDiagnosticController extends Controller
 
         return inertia('admin/diagnostics/Show', [
             'diagnostic' => $diagnostic,
+            'related' => $diagnostic->case_reference
+                ? $this->caseDiscoveryService->relatedRecords($diagnostic->case_reference, excludeDiagnosticId: $diagnostic->id)
+                : [],
         ]);
     }
 
