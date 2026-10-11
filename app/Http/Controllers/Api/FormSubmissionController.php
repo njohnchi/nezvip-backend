@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\EmailTemplate;
 use App\Models\FormSubmission;
 use App\Services\AcknowledgementEmailService;
+use App\Services\CaseVerificationService;
 use App\Services\TeamNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -15,6 +16,7 @@ class FormSubmissionController extends Controller
     public function __construct(
         public AcknowledgementEmailService $acknowledgementEmailService,
         public TeamNotificationService $teamNotificationService,
+        public CaseVerificationService $caseVerificationService,
     ) {}
 
     private function getValidationRules(string $formType): array
@@ -252,6 +254,10 @@ class FormSubmissionController extends Controller
 
         $recipientEmail = (string) (($data['email'] ?? '') ?: '');
 
+        $continuationToken = $recipientEmail !== ''
+            ? $this->caseVerificationService->issue($recipientEmail, notify: false)
+            : null;
+
         if ($recipientEmail !== '') {
             $this->acknowledgementEmailService->send(
                 $this->acknowledgementTemplateFor($formType),
@@ -277,6 +283,7 @@ class FormSubmissionController extends Controller
                 'id' => $submission->id,
                 'reference' => $reference,
                 'case_reference' => $submission->case_reference,
+                'continuation_token' => $continuationToken,
             ],
         ], 201);
     }

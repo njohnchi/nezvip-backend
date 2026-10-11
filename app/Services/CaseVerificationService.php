@@ -11,8 +11,11 @@ class CaseVerificationService
 {
     /**
      * Issue a short-lived magic link, invalidating any outstanding links for the email.
+     *
+     * Returns the raw token so callers can hand it straight back to the client for
+     * immediate continuation without forcing a round-trip through email.
      */
-    public function issue(string $email): void
+    public function issue(string $email, bool $notify = true): string
     {
         $email = strtolower(trim($email));
 
@@ -30,7 +33,11 @@ class CaseVerificationService
             'expires_at' => now()->addMinutes($ttl),
         ]);
 
-        Mail::to($email)->queue(new CaseMagicLinkMail($this->linkFor($token), $ttl));
+        if ($notify) {
+            Mail::to($email)->queue(new CaseMagicLinkMail($this->linkFor($token), $ttl));
+        }
+
+        return $token;
     }
 
     /**

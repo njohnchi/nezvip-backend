@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\EmailTemplate;
 use App\Models\VentureDiagnostic;
 use App\Services\AcknowledgementEmailService;
+use App\Services\CaseVerificationService;
 use App\Services\TeamNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -15,6 +16,7 @@ class VentureDiagnosticController extends Controller
     public function __construct(
         public AcknowledgementEmailService $acknowledgementEmailService,
         public TeamNotificationService $teamNotificationService,
+        public CaseVerificationService $caseVerificationService,
     ) {}
 
     public function store(Request $request)
@@ -113,6 +115,8 @@ class VentureDiagnosticController extends Controller
 
         $reference = $diagnostic->reference;
 
+        $continuationToken = $this->caseVerificationService->issue($diagnostic->email, notify: false);
+
         $this->acknowledgementEmailService->send(
             EmailTemplate::VENTURE_DIAGNOSTIC_ACKNOWLEDGEMENT,
             $diagnostic->email,
@@ -138,6 +142,7 @@ class VentureDiagnosticController extends Controller
                 'id' => $diagnostic->id,
                 'reference' => $reference,
                 'case_reference' => $diagnostic->case_reference,
+                'continuation_token' => $continuationToken,
             ],
         ], 201);
     }
