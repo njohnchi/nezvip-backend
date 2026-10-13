@@ -172,3 +172,44 @@ it('refuses prefill for an undertaking not linked to the verified email', functi
         ->assertForbidden()
         ->assertJsonPath('reason', 'not_owned');
 });
+
+it('prefills the latest confirmed value for a shared field', function () {
+    createCaseSubmission('VDS-000050', 'founder@example.com', 'venture_deconstruction', [
+        'venture_description' => 'First description',
+        'target_market' => 'europe',
+    ]);
+    createCaseSubmission('VDS-000050', 'founder@example.com', 'venture_synthesis', [
+        'venture_description' => 'Second description',
+        'target_market' => '',
+    ]);
+
+    $token = issueCaseToken('founder@example.com');
+
+    $this->getJson("/api/v1/cases/VDS-000050/prefill?token={$token}")
+        ->assertOk()
+        ->assertJsonPath('data.fields.venture_description', 'Second description')
+        ->assertJsonPath('data.fields.target_market', 'europe');
+
+    expect(FormSubmission::query()
+        ->where('data->venture_description', 'First description')
+        ->exists())->toBeTrue();
+});
+
+it('derives reusable fields in chronological order across diagnostics and submissions', function () {
+    $diagnostic = VentureDiagnostic::query()->create(ventureDiagnosticPayload([
+        'email' => 'founder@example.com',
+        'case_reference' => 'VDS-000060',
+        'venture_name' => 'Diagnostic Name',
+    ]));
+    $diagnostic->forceFill(['created_at' => now()->subHour()])->save();
+
+    createCaseSubmission('VDS-000060', 'founder@example.com', 'venture_deconstruction', [
+        'venture_name' => 'Submission Name',
+    ]);
+
+    $token = issueCaseToken('founder@example.com');
+
+    $this->getJson("/api/v1/cases/VDS-000060/prefill?token={$token}")
+        ->assertOk()
+        ->assertJsonPath('data.fields.venture_name', 'Submission Name');
+});
