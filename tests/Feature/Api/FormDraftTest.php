@@ -85,3 +85,76 @@ it('lists drafts for a verified email', function () {
 it('requires a valid token to list drafts', function () {
     $this->getJson('/api/v1/form-drafts?token=nope')->assertForbidden();
 });
+
+it('completes the matching in-progress draft when its form is submitted', function () {
+    $draft = FormDraft::factory()->create([
+        'form_type' => 'insights_subscribe',
+        'email' => 'founder@example.com',
+        'case_reference' => null,
+        'status' => 'draft',
+    ]);
+
+    $this->postJson('/api/v1/form-submission', [
+        'form_type' => 'insights_subscribe',
+        'data' => ['email' => 'founder@example.com'],
+    ])->assertCreated();
+
+    expect($draft->refresh()->status)->toBe('completed');
+
+    $token = issueDraftToken('founder@example.com');
+
+    $listed = $this->getJson('/api/v1/form-drafts?token='.$token)
+        ->assertOk()
+        ->json('data');
+
+    expect($listed)->toBe([]);
+});
+
+it('retires a resumed draft when the continuation token is no longer valid', function () {
+    $draft = FormDraft::factory()->create([
+        'form_type' => 'insights_subscribe',
+        'email' => 'founder@example.com',
+        'case_reference' => 'CASE-000777',
+        'status' => 'draft',
+    ]);
+
+    $this->postJson('/api/v1/form-submission', [
+        'form_type' => 'insights_subscribe',
+        'case_reference' => 'CASE-000777',
+        'continuation_token' => 'expired-or-unknown',
+        'data' => ['email' => 'founder@example.com'],
+    ])->assertCreated();
+
+    expect($draft->refresh()->status)->toBe('completed');
+});
+
+it('leaves another undertaking draft intact when a different case is submitted', function () {
+    $other = FormDraft::factory()->create([
+        'form_type' => 'insights_subscribe',
+        'email' => 'founder@example.com',
+        'case_reference' => 'CASE-000900',
+        'status' => 'draft',
+    ]);
+
+    $this->postJson('/api/v1/form-submission', [
+        'form_type' => 'insights_subscribe',
+        'data' => ['email' => 'founder@example.com'],
+    ])->assertCreated();
+
+    expect($other->refresh()->status)->toBe('draft');
+});
+
+it('completes a diagnostic draft when the diagnostic is submitted', function () {
+    $draft = FormDraft::factory()->create([
+        'form_type' => 'venture_diagnostic',
+        'email' => 'founder@example.com',
+        'case_reference' => null,
+        'status' => 'draft',
+    ]);
+
+    $this->postJson('/api/v1/venture-diagnostic', ventureDiagnosticPayload([
+        'email' => 'founder@example.com',
+    ]))->assertCreated();
+
+    expect($draft->refresh()->status)->toBe('completed');
+});

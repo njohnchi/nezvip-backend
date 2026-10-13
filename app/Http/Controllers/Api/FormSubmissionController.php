@@ -9,6 +9,7 @@ use App\Services\AcknowledgementEmailService;
 use App\Services\CaseDiscoveryService;
 use App\Services\CaseReferenceService;
 use App\Services\CaseVerificationService;
+use App\Services\FormDraftService;
 use App\Services\TeamNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -21,6 +22,7 @@ class FormSubmissionController extends Controller
         public CaseVerificationService $caseVerificationService,
         public CaseDiscoveryService $caseDiscoveryService,
         public CaseReferenceService $caseReferenceService,
+        public FormDraftService $formDraftService,
     ) {}
 
     private function getValidationRules(string $formType): array
@@ -244,6 +246,8 @@ class FormSubmissionController extends Controller
 
         $data = (array) ($request->input('data', []) ?? []);
 
+        $requestedCaseReference = $this->requestedCaseReference($request, $data);
+
         $submission = FormSubmission::create([
             'form_type' => $formType,
             'data' => $data,
@@ -262,6 +266,12 @@ class FormSubmissionController extends Controller
         $continuationToken = $recipientEmail !== ''
             ? $this->caseVerificationService->issue($recipientEmail, notify: false)
             : null;
+
+        $this->formDraftService->completeForSubmission(
+            $recipientEmail,
+            $formType,
+            [$requestedCaseReference, $submission->case_reference],
+        );
 
         if ($recipientEmail !== '') {
             $this->acknowledgementEmailService->send(
@@ -314,14 +324,9 @@ class FormSubmissionController extends Controller
      */
     private function resolveCaseReference(Request $request, array $data): ?string
     {
-        $candidate = (string) ($request->input('case_reference') ?? '')
-            ?: (string) ($data['case_reference'] ?? '')
-            ?: (string) ($data['diagnostic_reference'] ?? '')
-            ?: (string) ($data['prior_reference'] ?? '');
+        $candidate = $this->requestedCaseReference($request, $data);
 
-        $candidate = strtoupper(trim($candidate));
-
-        if ($candidate === '') {
+        if ($candidate === null) {
             return null;
         }
 
@@ -334,6 +339,23 @@ class FormSubmissionController extends Controller
         }
 
         return $candidate;
+    }
+
+    /**
+     * The case reference the client asked to attach to, before verification.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function requestedCaseReference(Request $request, array $data): ?string
+    {
+        $candidate = (string) ($request->input('case_reference') ?? '')
+            ?: (string) ($data['case_reference'] ?? '')
+            ?: (string) ($data['diagnostic_reference'] ?? '')
+            ?: (string) ($data['prior_reference'] ?? '');
+
+        $candidate = strtoupper(trim($candidate));
+
+        return $candidate === '' ? null : $candidate;
     }
 
     /**

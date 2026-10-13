@@ -9,6 +9,7 @@ use App\Services\AcknowledgementEmailService;
 use App\Services\CaseDiscoveryService;
 use App\Services\CaseReferenceService;
 use App\Services\CaseVerificationService;
+use App\Services\FormDraftService;
 use App\Services\TeamNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -21,6 +22,7 @@ class VentureDiagnosticController extends Controller
         public CaseVerificationService $caseVerificationService,
         public CaseDiscoveryService $caseDiscoveryService,
         public CaseReferenceService $caseReferenceService,
+        public FormDraftService $formDraftService,
     ) {}
 
     public function store(Request $request)
@@ -118,6 +120,12 @@ class VentureDiagnosticController extends Controller
             'operator_assisted' => $this->isOperatorAssisted($request),
         ])->save();
 
+        $this->formDraftService->completeForSubmission(
+            $diagnostic->email,
+            'venture_diagnostic',
+            [$this->requestedCaseReference($request), $diagnostic->case_reference],
+        );
+
         $reference = $diagnostic->reference;
 
         $continuationToken = $this->caseVerificationService->issue($diagnostic->email, notify: false);
@@ -163,9 +171,9 @@ class VentureDiagnosticController extends Controller
      */
     private function resolveCaseReference(Request $request, VentureDiagnostic $diagnostic): ?string
     {
-        $candidate = strtoupper(trim((string) ($request->input('case_reference') ?? '')));
+        $candidate = $this->requestedCaseReference($request);
 
-        if ($candidate === '') {
+        if ($candidate === null) {
             return $this->caseReferenceService->mint();
         }
 
@@ -178,6 +186,16 @@ class VentureDiagnosticController extends Controller
         }
 
         return $candidate;
+    }
+
+    /**
+     * The case reference the client asked to attach to, before verification.
+     */
+    private function requestedCaseReference(Request $request): ?string
+    {
+        $candidate = strtoupper(trim((string) ($request->input('case_reference') ?? '')));
+
+        return $candidate === '' ? null : $candidate;
     }
 
     /**
