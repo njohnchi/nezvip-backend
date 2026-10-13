@@ -23,6 +23,7 @@ class StoreFormDraftRequest extends FormRequest
             'case_reference' => ['nullable', 'string', 'max:60'],
             'data' => ['nullable', 'array'],
             'current_step' => ['nullable', 'string', 'max:120'],
+            'token' => ['nullable', 'string', 'max:120'],
         ];
     }
 }

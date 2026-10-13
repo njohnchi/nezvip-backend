@@ -51,8 +51,59 @@ it('updates an existing draft when a reference is supplied', function () {
     expect(FormDraft::query()->count())->toBe(1);
 });
 
-it('resumes a draft by its reference', function () {
+it('does not attach a case reference without a verified token', function () {
+    $response = $this->postJson('/api/v1/form-drafts', [
+        'form_type' => 'venture_synthesis',
+        'email' => 'founder@example.com',
+        'case_reference' => 'CASE-000123',
+        'data' => ['venture_name' => 'Draft Venture'],
+    ])->assertOk();
+
+    $draft = FormDraft::query()
+        ->where('draft_reference', $response->json('data.draft_reference'))
+        ->firstOrFail();
+
+    expect($draft->case_reference)->toBeNull();
+});
+
+it('attaches a case reference when the continuation token is verified', function () {
+    $token = issueDraftToken('founder@example.com');
+
+    $response = $this->postJson('/api/v1/form-drafts', [
+        'form_type' => 'venture_synthesis',
+        'email' => 'ignored@example.com',
+        'case_reference' => 'CASE-000123',
+        'data' => ['venture_name' => 'Draft Venture'],
+        'token' => $token,
+    ])->assertOk();
+
+    $draft = FormDraft::query()
+        ->where('draft_reference', $response->json('data.draft_reference'))
+        ->firstOrFail();
+
+    expect($draft->email)->toBe('founder@example.com');
+    expect($draft->case_reference)->toBe('CASE-000123');
+});
+
+it('preserves an existing case reference on an unverified update', function () {
     $draft = FormDraft::factory()->create([
+        'form_type' => 'venture_synthesis',
+        'email' => 'founder@example.com',
+        'case_reference' => 'CASE-000900',
+    ]);
+
+    $this->postJson('/api/v1/form-drafts', [
+        'draft_reference' => $draft->draft_reference,
+        'form_type' => 'venture_synthesis',
+        'data' => ['venture_name' => 'Updated Venture'],
+    ])->assertOk();
+
+    expect($draft->refresh()->case_reference)->toBe('CASE-000900');
+});
+
+it('resumes an unattached draft by its reference', function () {
+    $draft = FormDraft::factory()->create([
+        'email' => null,
         'data' => ['venture_name' => 'Resume Venture'],
         'current_step' => 'section-c',
     ]);
@@ -62,6 +113,35 @@ it('resumes a draft by its reference', function () {
         ->assertJsonPath('data.draft_reference', $draft->draft_reference)
         ->assertJsonPath('data.data.venture_name', 'Resume Venture')
         ->assertJsonPath('data.current_step', 'section-c');
+});
+
+it('resumes an email-linked draft when a matching continuation token is supplied', function () {
+    $draft = FormDraft::factory()->create([
+        'email' => 'founder@example.com',
+        'data' => ['venture_name' => 'Resume Venture'],
+    ]);
+
+    $token = issueDraftToken('founder@example.com');
+
+    $this->getJson('/api/v1/form-drafts/'.$draft->draft_reference.'?token='.$token)
+        ->assertOk()
+        ->assertJsonPath('data.draft_reference', $draft->draft_reference)
+        ->assertJsonPath('data.data.venture_name', 'Resume Venture');
+});
+
+it('hides an email-linked draft from an anonymous caller', function () {
+    $draft = FormDraft::factory()->create(['email' => 'founder@example.com']);
+
+    $this->getJson('/api/v1/form-drafts/'.$draft->draft_reference)->assertForbidden();
+});
+
+it('hides an email-linked draft from a token for another email', function () {
+    $draft = FormDraft::factory()->create(['email' => 'founder@example.com']);
+
+    $token = issueDraftToken('someone-else@example.com');
+
+    $this->getJson('/api/v1/form-drafts/'.$draft->draft_reference.'?token='.$token)
+        ->assertForbidden();
 });
 
 it('returns not found for an unknown draft reference', function () {
