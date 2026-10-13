@@ -34,12 +34,14 @@ it('accepts a venture deconstruction intake with a deconstruction reference', fu
         ->assertJsonPath('success', true);
 
     expect($response->json('data.reference'))->toStartWith('VDS-');
-    expect($response->json('data.case_reference'))->toBe($response->json('data.reference'));
+    expect($response->json('data.case_reference'))->toStartWith('CASE-');
+    expect($response->json('data.case_reference'))->not->toBe($response->json('data.reference'));
 
     $submission = FormSubmission::query()->latest('id')->firstOrFail();
     expect($submission->form_type)->toBe('venture_deconstruction');
     expect($submission->reference)->toBe('VDS-'.str_pad((string) $submission->id, 6, '0', STR_PAD_LEFT));
-    expect($submission->case_reference)->toBe($submission->reference);
+    expect($submission->case_reference)->toStartWith('CASE-');
+    expect($submission->case_reference)->not->toBe($submission->reference);
 
     Mail::assertQueued(TemplateAcknowledgementMail::class, function (TemplateAcknowledgementMail $mail) {
         if (! $mail->hasTo('founder@example.com')) {
@@ -142,7 +144,7 @@ it('ignores a supplied case reference that is not verified by a continuation tok
     ])->assertCreated();
 
     expect($response->json('data.case_reference'))->not->toBe($victimCase)
-        ->toBe($response->json('data.reference'));
+        ->toStartWith('CASE-');
 
     $this->assertDatabaseHas('form_submissions', [
         'form_type' => 'venture_deconstruction',
@@ -185,7 +187,7 @@ it('refuses to link a case reference when the token belongs to another email', f
     ])->assertCreated();
 
     expect($response->json('data.case_reference'))->not->toBe($ownercase)
-        ->toBe($response->json('data.reference'));
+        ->toStartWith('CASE-');
 });
 
 it('rejects a venture deconstruction intake missing required fields', function () {

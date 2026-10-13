@@ -7,6 +7,7 @@ use App\Models\EmailTemplate;
 use App\Models\FormSubmission;
 use App\Services\AcknowledgementEmailService;
 use App\Services\CaseDiscoveryService;
+use App\Services\CaseReferenceService;
 use App\Services\CaseVerificationService;
 use App\Services\TeamNotificationService;
 use Illuminate\Http\Request;
@@ -19,6 +20,7 @@ class FormSubmissionController extends Controller
         public TeamNotificationService $teamNotificationService,
         public CaseVerificationService $caseVerificationService,
         public CaseDiscoveryService $caseDiscoveryService,
+        public CaseReferenceService $caseReferenceService,
     ) {}
 
     private function getValidationRules(string $formType): array
@@ -250,7 +252,7 @@ class FormSubmissionController extends Controller
         ]);
 
         if ($submission->case_reference === null) {
-            $submission->update(['case_reference' => $submission->reference]);
+            $submission->update(['case_reference' => $this->caseReferenceService->mint()]);
         }
 
         $reference = $submission->reference;

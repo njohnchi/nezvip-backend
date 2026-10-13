@@ -7,6 +7,7 @@ use App\Models\EmailTemplate;
 use App\Models\VentureDiagnostic;
 use App\Services\AcknowledgementEmailService;
 use App\Services\CaseDiscoveryService;
+use App\Services\CaseReferenceService;
 use App\Services\CaseVerificationService;
 use App\Services\TeamNotificationService;
 use Illuminate\Http\Request;
@@ -19,6 +20,7 @@ class VentureDiagnosticController extends Controller
         public TeamNotificationService $teamNotificationService,
         public CaseVerificationService $caseVerificationService,
         public CaseDiscoveryService $caseDiscoveryService,
+        public CaseReferenceService $caseReferenceService,
     ) {}
 
     public function store(Request $request)
@@ -157,14 +159,14 @@ class VentureDiagnosticController extends Controller
      * usable continuation token that verifies ownership of that undertaking for
      * the submitted email address. An authorized operator-assisted submission
      * (valid assisted intake key) is trusted to supply it directly. Otherwise a
-     * new case reference (this diagnostic's own reference) is created.
+     * new, service-neutral case reference is minted for the undertaking.
      */
     private function resolveCaseReference(Request $request, VentureDiagnostic $diagnostic): ?string
     {
         $candidate = strtoupper(trim((string) ($request->input('case_reference') ?? '')));
 
         if ($candidate === '') {
-            return $diagnostic->reference;
+            return $this->caseReferenceService->mint();
         }
 
         if ($this->isOperatorAssisted($request)) {
@@ -172,7 +174,7 @@ class VentureDiagnosticController extends Controller
         }
 
         if (! $this->verifiedForCase($request, $diagnostic->email, $candidate)) {
-            return $diagnostic->reference;
+            return $this->caseReferenceService->mint();
         }
 
         return $candidate;

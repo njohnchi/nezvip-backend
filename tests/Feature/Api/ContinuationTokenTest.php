@@ -90,6 +90,8 @@ it('links a continuation submission to the supplied case reference', function ()
     $caseReference = $first->json('data.case_reference');
     $token = $first->json('data.continuation_token');
 
+    expect($caseReference)->toStartWith('CASE-');
+
     $payload = ventureDeconstructionPayload(['case_reference' => $caseReference]);
     $payload['continuation_token'] = $token;
 
@@ -113,5 +115,45 @@ it('does not link a supplied case reference without a valid continuation token',
 
     expect($response->json('data.case_reference'))
         ->not->toBe('VDS-000042')
-        ->toBe($response->json('data.reference'));
+        ->toStartWith('CASE-');
+});
+
+it('mints a service-neutral case reference for a new undertaking', function () {
+    Mail::fake();
+
+    $submission = $this->postJson('/api/v1/form-submission', ventureDeconstructionPayload())
+        ->assertCreated();
+
+    expect($submission->json('data.case_reference'))
+        ->toStartWith('CASE-')
+        ->not->toBe($submission->json('data.reference'));
+
+    $diagnostic = $this->postJson('/api/v1/venture-diagnostic', ventureDiagnosticPayload([
+        'email' => 'founder@example.com',
+    ]))->assertCreated();
+
+    expect($diagnostic->json('data.case_reference'))
+        ->toStartWith('CASE-')
+        ->not->toBe($diagnostic->json('data.reference'));
+});
+
+it('retains the same case reference when a diagnostic continues an undertaking', function () {
+    Mail::fake();
+
+    $first = $this->postJson('/api/v1/form-submission', ventureDeconstructionPayload())
+        ->assertCreated();
+
+    $caseReference = $first->json('data.case_reference');
+
+    expect($caseReference)->toStartWith('CASE-');
+
+    $diagnostic = $this->postJson('/api/v1/venture-diagnostic', array_merge(
+        ventureDiagnosticPayload(['email' => 'founder@example.com']),
+        [
+            'case_reference' => $caseReference,
+            'continuation_token' => $first->json('data.continuation_token'),
+        ],
+    ))->assertCreated();
+
+    expect($diagnostic->json('data.case_reference'))->toBe($caseReference);
 });
