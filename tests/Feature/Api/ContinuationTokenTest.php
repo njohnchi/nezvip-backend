@@ -84,17 +84,34 @@ it('invalidates a prior continuation token when a new submission issues one', fu
 it('links a continuation submission to the supplied case reference', function () {
     Mail::fake();
 
-    $this->postJson('/api/v1/form-submission', ventureDeconstructionPayload([
-        'case_reference' => 'VDS-000042',
-    ]))
+    $first = $this->postJson('/api/v1/form-submission', ventureDeconstructionPayload())
+        ->assertCreated();
+
+    $caseReference = $first->json('data.case_reference');
+    $token = $first->json('data.continuation_token');
+
+    $payload = ventureDeconstructionPayload(['case_reference' => $caseReference]);
+    $payload['continuation_token'] = $token;
+
+    $second = $this->postJson('/api/v1/form-submission', $payload)
         ->assertCreated()
-        ->assertJsonPath('data.case_reference', 'VDS-000042');
+        ->assertJsonPath('data.case_reference', $caseReference);
 
-    $token = $this->postJson('/api/v1/form-submission', ventureDeconstructionPayload([
-        'case_reference' => 'VDS-000042',
-    ]))->json('data.continuation_token');
+    $cases = $this->getJson('/api/v1/cases?token='.$second->json('data.continuation_token'))
+        ->json('data.cases');
 
-    $cases = $this->getJson('/api/v1/cases?token='.$token)->json('data.cases');
+    expect(collect($cases)->pluck('case_reference'))->toContain($caseReference);
+});
 
-    expect(collect($cases)->pluck('case_reference'))->toContain('VDS-000042');
+it('does not link a supplied case reference without a valid continuation token', function () {
+    Mail::fake();
+
+    $response = $this->postJson(
+        '/api/v1/form-submission',
+        ventureDeconstructionPayload(['case_reference' => 'VDS-000042'])
+    )->assertCreated();
+
+    expect($response->json('data.case_reference'))
+        ->not->toBe('VDS-000042')
+        ->toBe($response->json('data.reference'));
 });

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\EmailTemplate;
 use App\Models\FormSubmission;
 use App\Services\AcknowledgementEmailService;
+use App\Services\CaseDiscoveryService;
 use App\Services\CaseVerificationService;
 use App\Services\TeamNotificationService;
 use Illuminate\Http\Request;
@@ -17,6 +18,7 @@ class FormSubmissionController extends Controller
         public AcknowledgementEmailService $acknowledgementEmailService,
         public TeamNotificationService $teamNotificationService,
         public CaseVerificationService $caseVerificationService,
+        public CaseDiscoveryService $caseDiscoveryService,
     ) {}
 
     private function getValidationRules(string $formType): array
@@ -224,6 +226,7 @@ class FormSubmissionController extends Controller
         $formType = $request->input('form_type');
         $rules = array_merge($this->getValidationRules($formType), [
             'case_reference' => 'nullable|string|max:60',
+            'continuation_token' => 'nullable|string|max:120',
             'operator_assisted' => 'sometimes|boolean',
             'assisted_intake_key' => 'sometimes|string',
         ]);
@@ -297,6 +300,16 @@ class FormSubmissionController extends Controller
         };
     }
 
+    /**
+     * Resolve the case reference for the submission.
+     *
+     * A client-supplied case reference is only trusted when it is backed by a
+     * usable continuation token that verifies ownership of that undertaking for
+     * the submitted email address. Otherwise it is ignored so a submission can
+     * never be attached to another party's case by editing the request. An
+     * authorized operator-assisted submission (valid assisted intake key) is
+     * trusted to supply the case reference directly.
+     */
     private function resolveCaseReference(Request $request, array $data): ?string
     {
         $candidate = (string) ($request->input('case_reference') ?? '')
@@ -306,7 +319,44 @@ class FormSubmissionController extends Controller
 
         $candidate = strtoupper(trim($candidate));
 
-        return $candidate !== '' ? $candidate : null;
+        if ($candidate === '') {
+            return null;
+        }
+
+        if ($this->isOperatorAssisted($request)) {
+            return $candidate;
+        }
+
+        if (! $this->verifiedForCase($request, $data, $candidate)) {
+            return null;
+        }
+
+        return $candidate;
+    }
+
+    /**
+     * Confirm the supplied continuation token verifies ownership of the case
+     * for the submitted email address.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function verifiedForCase(Request $request, array $data, string $caseReference): bool
+    {
+        $token = (string) $request->input('continuation_token', '');
+        $verification = $this->caseVerificationService->inspect($token)['verification'];
+
+        if (! $verification) {
+            return false;
+        }
+
+        $submittedEmail = strtolower(trim((string) ($data['email'] ?? '')));
+
+        if ($submittedEmail === '' || strtolower($verification->email) !== $submittedEmail) {
+            return false;
+        }
+
+        return collect($this->caseDiscoveryService->forEmail($verification->email))
+            ->contains(fn (array $case) => $case['case_reference'] === $caseReference);
     }
 
     private function isOperatorAssisted(Request $request): bool

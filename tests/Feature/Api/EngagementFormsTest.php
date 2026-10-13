@@ -57,9 +57,28 @@ it('accepts a venture deconstruction intake with a deconstruction reference', fu
 it('links a deeper engagement to an existing case reference', function () {
     Mail::fake();
 
+    // The first submission creates the case and issues a continuation token.
+    $first = $this->postJson('/api/v1/form-submission', [
+        'form_type' => 'venture_deconstruction',
+        'data' => [
+            'full_name' => 'Founder Name',
+            'email' => 'founder@example.com',
+            'venture_description' => 'A venture being explored.',
+            'value_claim' => 'Customers pay for clarity.',
+            'current_uncertainty' => 'Which market to enter first.',
+            'target_market' => 'africa',
+        ],
+    ])->assertCreated();
+
+    $caseReference = $first->json('data.case_reference');
+    $token = $first->json('data.continuation_token');
+
+    expect($caseReference)->toBeString()->not->toBeEmpty();
+
     $this->postJson('/api/v1/form-submission', [
         'form_type' => 'venture_synthesis',
-        'case_reference' => 'VDS-000042',
+        'case_reference' => $caseReference,
+        'continuation_token' => $token,
         'data' => [
             'full_name' => 'Founder Name',
             'email' => 'founder@example.com',
@@ -83,11 +102,90 @@ it('links a deeper engagement to an existing case reference', function () {
         ],
     ])
         ->assertCreated()
-        ->assertJsonPath('data.case_reference', 'VDS-000042')
-        ->assertJsonPath('data.reference', 'SYN-000001');
+        ->assertJsonPath('data.case_reference', $caseReference)
+        ->assertJsonPath('data.reference', fn (string $ref) => str_starts_with($ref, 'SYN-'));
 
     $submission = FormSubmission::query()->where('form_type', 'venture_synthesis')->firstOrFail();
-    expect($submission->case_reference)->toBe('VDS-000042');
+    expect($submission->case_reference)->toBe($caseReference);
+});
+
+it('ignores a supplied case reference that is not verified by a continuation token', function () {
+    Mail::fake();
+
+    // Create a real case for founder@example.com.
+    $first = $this->postJson('/api/v1/form-submission', [
+        'form_type' => 'venture_deconstruction',
+        'data' => [
+            'full_name' => 'Founder Name',
+            'email' => 'founder@example.com',
+            'venture_description' => 'A venture being explored.',
+            'value_claim' => 'Customers pay for clarity.',
+            'current_uncertainty' => 'Which market to enter first.',
+            'target_market' => 'africa',
+        ],
+    ])->assertCreated();
+
+    $victimCase = $first->json('data.case_reference');
+
+    // A different person forges the victim's case reference, with no token.
+    $response = $this->postJson('/api/v1/form-submission', [
+        'form_type' => 'venture_deconstruction',
+        'case_reference' => $victimCase,
+        'data' => [
+            'full_name' => 'Attacker',
+            'email' => 'attacker@example.com',
+            'venture_description' => 'A separate venture.',
+            'value_claim' => 'Something else.',
+            'current_uncertainty' => 'Unrelated.',
+            'target_market' => 'europe',
+        ],
+    ])->assertCreated();
+
+    expect($response->json('data.case_reference'))->not->toBe($victimCase)
+        ->toBe($response->json('data.reference'));
+
+    $this->assertDatabaseHas('form_submissions', [
+        'form_type' => 'venture_deconstruction',
+        'case_reference' => $victimCase,
+    ]);
+    expect(FormSubmission::query()->where('data->email', 'attacker@example.com')->firstOrFail()->case_reference)
+        ->not->toBe($victimCase);
+});
+
+it('refuses to link a case reference when the token belongs to another email', function () {
+    Mail::fake();
+
+    $owner = $this->postJson('/api/v1/form-submission', [
+        'form_type' => 'venture_deconstruction',
+        'data' => [
+            'full_name' => 'Owner',
+            'email' => 'owner@example.com',
+            'venture_description' => 'Owned venture.',
+            'value_claim' => 'Owned value.',
+            'current_uncertainty' => 'Owned uncertainty.',
+            'target_market' => 'africa',
+        ],
+    ])->assertCreated();
+
+    $ownercase = $owner->json('data.case_reference');
+    $ownerToken = $owner->json('data.continuation_token');
+
+    $response = $this->postJson('/api/v1/form-submission', [
+        'form_type' => 'venture_deconstruction',
+        'case_reference' => $ownercase,
+        'continuation_token' => $ownerToken,
+        'data' => [
+            'full_name' => 'Impostor',
+            'email' => 'impostor@example.com',
+            'venture_description' => 'Impostor venture.',
+            'value_claim' => 'Impostor value.',
+            'current_uncertainty' => 'Impostor uncertainty.',
+            'target_market' => 'europe',
+        ],
+    ])->assertCreated();
+
+    expect($response->json('data.case_reference'))->not->toBe($ownercase)
+        ->toBe($response->json('data.reference'));
 });
 
 it('rejects a venture deconstruction intake missing required fields', function () {

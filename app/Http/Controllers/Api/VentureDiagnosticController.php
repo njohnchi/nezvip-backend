@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\EmailTemplate;
 use App\Models\VentureDiagnostic;
 use App\Services\AcknowledgementEmailService;
+use App\Services\CaseDiscoveryService;
 use App\Services\CaseVerificationService;
 use App\Services\TeamNotificationService;
 use Illuminate\Http\Request;
@@ -17,6 +18,7 @@ class VentureDiagnosticController extends Controller
         public AcknowledgementEmailService $acknowledgementEmailService,
         public TeamNotificationService $teamNotificationService,
         public CaseVerificationService $caseVerificationService,
+        public CaseDiscoveryService $caseDiscoveryService,
     ) {}
 
     public function store(Request $request)
@@ -96,6 +98,7 @@ class VentureDiagnosticController extends Controller
 
             // Case linkage & intake assistance
             'case_reference' => 'nullable|string|max:60',
+            'continuation_token' => 'nullable|string|max:120',
             'operator_assisted' => 'sometimes|boolean',
             'assisted_intake_key' => 'sometimes|string',
         ]);
@@ -147,17 +150,55 @@ class VentureDiagnosticController extends Controller
         ], 201);
     }
 
+    /**
+     * Resolve the case reference for the diagnostic.
+     *
+     * The supplied case reference is only honoured when it is backed by a
+     * usable continuation token that verifies ownership of that undertaking for
+     * the submitted email address. An authorized operator-assisted submission
+     * (valid assisted intake key) is trusted to supply it directly. Otherwise a
+     * new case reference (this diagnostic's own reference) is created.
+     */
     private function resolveCaseReference(Request $request, VentureDiagnostic $diagnostic): ?string
     {
-        $candidate = (string) ($request->input('case_reference') ?? '');
+        $candidate = strtoupper(trim((string) ($request->input('case_reference') ?? '')));
 
         if ($candidate === '') {
             return $diagnostic->reference;
         }
 
-        $candidate = strtoupper(trim($candidate));
+        if ($this->isOperatorAssisted($request)) {
+            return $candidate;
+        }
 
-        return $candidate !== '' ? $candidate : $diagnostic->reference;
+        if (! $this->verifiedForCase($request, $diagnostic->email, $candidate)) {
+            return $diagnostic->reference;
+        }
+
+        return $candidate;
+    }
+
+    /**
+     * Confirm the supplied continuation token verifies ownership of the case
+     * for the submitted email address.
+     */
+    private function verifiedForCase(Request $request, ?string $email, string $caseReference): bool
+    {
+        $token = (string) $request->input('continuation_token', '');
+        $verification = $this->caseVerificationService->inspect($token)['verification'];
+
+        if (! $verification) {
+            return false;
+        }
+
+        $submittedEmail = strtolower(trim((string) $email));
+
+        if ($submittedEmail === '' || strtolower($verification->email) !== $submittedEmail) {
+            return false;
+        }
+
+        return collect($this->caseDiscoveryService->forEmail($verification->email))
+            ->contains(fn (array $case) => $case['case_reference'] === $caseReference);
     }
 
     private function isOperatorAssisted(Request $request): bool
