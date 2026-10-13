@@ -45,15 +45,42 @@ class CaseVerificationService
      */
     public function resolve(string $token): ?CaseVerification
     {
+        return $this->inspect($token)['verification'];
+    }
+
+    /**
+     * Resolve a token together with a machine-readable failure reason.
+     *
+     * Reasons: "missing" (no token supplied), "invalid" (unknown token),
+     * "expired" (past its TTL) or "consumed" (already used). A usable token
+     * returns a null reason so callers can react differently to an expired
+     * link versus an unowned undertaking.
+     *
+     * @return array{verification: CaseVerification|null, reason: string|null}
+     */
+    public function inspect(string $token): array
+    {
         if ($token === '') {
-            return null;
+            return ['verification' => null, 'reason' => 'missing'];
         }
 
         $verification = CaseVerification::query()
             ->where('token_hash', hash('sha256', $token))
             ->first();
 
-        return $verification && $verification->isUsable() ? $verification : null;
+        if (! $verification) {
+            return ['verification' => null, 'reason' => 'invalid'];
+        }
+
+        if ($verification->isConsumed()) {
+            return ['verification' => null, 'reason' => 'consumed'];
+        }
+
+        if ($verification->isExpired()) {
+            return ['verification' => null, 'reason' => 'expired'];
+        }
+
+        return ['verification' => $verification, 'reason' => null];
     }
 
     private function linkFor(string $token): string

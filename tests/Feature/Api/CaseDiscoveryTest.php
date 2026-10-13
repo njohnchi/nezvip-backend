@@ -127,7 +127,25 @@ it('rejects an expired continuation token', function () {
         'expires_at' => now()->subMinute(),
     ]);
 
-    $this->getJson('/api/v1/cases?token='.$token)->assertForbidden();
+    $this->getJson('/api/v1/cases?token='.$token)
+        ->assertForbidden()
+        ->assertJsonPath('reason', 'expired');
+});
+
+it('reports an expired token as the prefill failure reason', function () {
+    createCaseSubmission('VDS-000040', 'founder@example.com');
+
+    $token = 'expired-prefill-token';
+
+    CaseVerification::query()->create([
+        'email' => 'founder@example.com',
+        'token_hash' => hash('sha256', $token),
+        'expires_at' => now()->subMinute(),
+    ]);
+
+    $this->getJson("/api/v1/cases/VDS-000040/prefill?token={$token}")
+        ->assertForbidden()
+        ->assertJsonPath('reason', 'expired');
 });
 
 it('returns reusable prefill fields for an owned undertaking', function () {
@@ -151,5 +169,6 @@ it('refuses prefill for an undertaking not linked to the verified email', functi
     $token = issueCaseToken('founder@example.com');
 
     $this->getJson("/api/v1/cases/VDS-000030/prefill?token={$token}")
-        ->assertForbidden();
+        ->assertForbidden()
+        ->assertJsonPath('reason', 'not_owned');
 });

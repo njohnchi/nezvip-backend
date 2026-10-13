@@ -30,10 +30,11 @@ class CaseController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $verification = $this->caseVerificationService->resolve((string) $request->query('token', ''));
+        $inspection = $this->caseVerificationService->inspect((string) $request->query('token', ''));
+        $verification = $inspection['verification'];
 
         if (! $verification) {
-            return $this->invalidLink();
+            return $this->invalidLink($inspection['reason'] ?? 'invalid');
         }
 
         $cases = collect($this->caseDiscoveryService->forEmail($verification->email))
@@ -55,10 +56,11 @@ class CaseController extends Controller
 
     public function prefill(Request $request, string $caseReference): JsonResponse
     {
-        $verification = $this->caseVerificationService->resolve((string) $request->query('token', ''));
+        $inspection = $this->caseVerificationService->inspect((string) $request->query('token', ''));
+        $verification = $inspection['verification'];
 
         if (! $verification) {
-            return $this->invalidLink();
+            return $this->invalidLink($inspection['reason'] ?? 'invalid');
         }
 
         $owned = collect($this->caseDiscoveryService->forEmail($verification->email))
@@ -67,6 +69,7 @@ class CaseController extends Controller
         if (! $owned) {
             return response()->json([
                 'success' => false,
+                'reason' => 'not_owned',
                 'message' => 'That undertaking is not linked to this email address.',
             ], 403);
         }
@@ -80,10 +83,11 @@ class CaseController extends Controller
         ]);
     }
 
-    private function invalidLink(): JsonResponse
+    private function invalidLink(string $reason): JsonResponse
     {
         return response()->json([
             'success' => false,
+            'reason' => $reason,
             'message' => 'This continuation link is invalid or has expired.',
         ], 403);
     }
