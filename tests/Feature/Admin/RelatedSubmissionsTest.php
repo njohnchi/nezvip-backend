@@ -37,6 +37,8 @@ it('shows related records on the admin submission review page', function () {
         ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
             ->component('admin/submissions/Show')
             ->has('related', 2)
+            ->has('related.0.kind')
+            ->has('related.0.id')
         );
 });
 
@@ -58,5 +60,7 @@ it('shows related records on the admin diagnostic review page', function () {
         ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
             ->component('admin/diagnostics/Show')
             ->has('related', 1)
+            ->has('related.0.kind')
+            ->has('related.0.id')
         );
 });

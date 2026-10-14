@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { AlertCircle, ArrowLeft, Trash2 } from 'lucide-vue-next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -160,6 +160,8 @@ const formatDate = (dateString: string) => {
     });
 };
 
+const relatedHref = (record: RelatedRecord) => record.kind === 'submission' ? `/admin/submissions/${record.id}` : `/admin/diagnostics/${record.id}`;
+
 const formatFieldName = (key: string) =>
     key
         .split('_')
@@ -283,12 +285,12 @@ const formatFieldName = (key: string) =>
                                     :key="`${record.kind}-${record.id}`"
                                     class="flex items-center justify-between gap-4 border-b pb-3 last:border-0 last:pb-0"
                                 >
-                                    <div>
-                                        <p class="font-medium">{{ record.label }}</p>
+                                    <Link :href="relatedHref(record)" class="group">
+                                        <p class="font-medium group-hover:text-primary group-hover:underline">{{ record.label }}</p>
                                         <p class="text-sm text-muted-foreground">
                                             {{ record.reference }} · {{ formatDate(record.created_at || '') }}
                                         </p>
-                                    </div>
+                                    </Link>
                                     <Badge variant="secondary">{{ record.status }}</Badge>
                                 </li>
                             </ul>

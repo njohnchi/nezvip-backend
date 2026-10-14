@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { AlertCircle, ArrowLeft, Trash2 } from 'lucide-vue-next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -37,6 +37,7 @@ const deleteSubmission = () => {
     if (confirm('Are you sure?')) router.delete(`/admin/submissions/${props.submission.id}`);
 };
 const formatDate = (d: string) => new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+const relatedHref = (record: RelatedRecord) => record.kind === 'submission' ? `/admin/submissions/${record.id}` : `/admin/diagnostics/${record.id}`;
 const getFormTypeLabel = (t: string) => {
     const labels: Record<string, string> = {
         scope_review: 'Scope Review', institutional_brief: 'Institutional Brief',
@@ -133,10 +134,10 @@ const formatFieldName = (k: string) => k.split('_').map(w => w.charAt(0).toUpper
                         <CardContent>
                             <ul class="space-y-3">
                                 <li v-for="record in related" :key="`${record.kind}-${record.id}`" class="flex items-center justify-between gap-4 border-b pb-3 last:border-0 last:pb-0">
-                                    <div>
-                                        <p class="font-medium">{{ record.label }}</p>
+                                    <Link :href="relatedHref(record)" class="group">
+                                        <p class="font-medium group-hover:text-primary group-hover:underline">{{ record.label }}</p>
                                         <p class="text-sm text-muted-foreground">{{ record.reference }} · {{ formatDate(record.created_at || '') }}</p>
-                                    </div>
+                                    </Link>
                                     <Badge variant="secondary">{{ record.status }}</Badge>
                                 </li>
                             </ul>
