@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { ArrowLeft, Trash2 } from 'lucide-vue-next';
+import { AlertCircle, ArrowLeft, Trash2 } from 'lucide-vue-next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,12 +15,16 @@ interface RelatedRecord {
     kind: 'submission' | 'diagnostic'; id: number; label: string;
     reference: string; status: string; created_at: string | null;
 }
+interface Contradiction {
+    field: string; previous: string; previous_reference: string; previous_at: string | null;
+    current: string; current_reference: string; current_at: string | null;
+}
 interface Submission {
     id: number; form_type: string; status: string; data: Record<string, any>;
     case_reference: string | null; operator_assisted: boolean;
     admin_notes: string | null; created_at: string; reviewed_at: string | null; reviewer: Reviewer | null;
 }
-interface Props { submission: Submission; related: RelatedRecord[]; }
+interface Props { submission: Submission; related: RelatedRecord[]; contradictions: Contradiction[]; }
 const props = defineProps<Props>();
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -97,6 +101,28 @@ const formatFieldName = (k: string) => k.split('_').map(w => w.charAt(0).toUpper
                                     <p class="mt-1 whitespace-pre-wrap">{{ renderValue(value) }}</p>
                                 </div>
                             </div>
+                        </CardContent>
+                    </Card>
+                    <Card v-if="contradictions.length" class="mt-6 border-amber-300 bg-amber-50/60">
+                        <CardHeader>
+                            <CardTitle class="flex items-center gap-2 text-amber-900">
+                                <AlertCircle class="h-4 w-4" />
+                                Needs clarification
+                            </CardTitle>
+                            <CardDescription>These fields changed since an earlier submission. Confirm which value is correct.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <ul class="space-y-3">
+                                <li v-for="item in contradictions" :key="item.field" class="border-b border-amber-200 pb-3 last:border-0 last:pb-0">
+                                    <p class="font-medium">{{ formatFieldName(item.field) }}</p>
+                                    <p class="text-sm text-muted-foreground">
+                                        <span class="line-through">{{ item.previous }}</span>
+                                        <span class="mx-1">→</span>
+                                        <span class="font-medium text-foreground">{{ item.current }}</span>
+                                    </p>
+                                    <p class="text-xs text-muted-foreground">{{ item.previous_reference }} → {{ item.current_reference }}</p>
+                                </li>
+                            </ul>
                         </CardContent>
                     </Card>
                     <Card v-if="related.length" class="mt-6">

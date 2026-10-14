@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { ArrowLeft, Trash2 } from 'lucide-vue-next';
+import { AlertCircle, ArrowLeft, Trash2 } from 'lucide-vue-next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -99,9 +99,20 @@ interface RelatedRecord {
     created_at: string | null;
 }
 
+interface Contradiction {
+    field: string;
+    previous: string;
+    previous_reference: string;
+    previous_at: string | null;
+    current: string;
+    current_reference: string;
+    current_at: string | null;
+}
+
 interface Props {
     diagnostic: Diagnostic;
     related: RelatedRecord[];
+    contradictions: Contradiction[];
 }
 
 const props = defineProps<Props>();
@@ -148,6 +159,12 @@ const formatDate = (dateString: string) => {
         minute: '2-digit',
     });
 };
+
+const formatFieldName = (key: string) =>
+    key
+        .split('_')
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
 </script>
 
 <template>
@@ -222,6 +239,34 @@ const formatDate = (dateString: string) => {
                                 <Label class="text-muted-foreground">Case Reference</Label>
                                 <p class="font-medium">{{ diagnostic.case_reference || '—' }}</p>
                             </div>
+                        </CardContent>
+                    </Card>
+
+                    <!-- Needs clarification -->
+                    <Card v-if="contradictions.length" class="border-amber-300 bg-amber-50/60">
+                        <CardHeader>
+                            <CardTitle class="flex items-center gap-2 text-amber-900">
+                                <AlertCircle class="h-4 w-4" />
+                                Needs clarification
+                            </CardTitle>
+                            <CardDescription>These fields changed since an earlier submission. Confirm which value is correct.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <ul class="space-y-3">
+                                <li
+                                    v-for="item in contradictions"
+                                    :key="item.field"
+                                    class="border-b border-amber-200 pb-3 last:border-0 last:pb-0"
+                                >
+                                    <p class="font-medium">{{ formatFieldName(item.field) }}</p>
+                                    <p class="text-sm text-muted-foreground">
+                                        <span class="line-through">{{ item.previous }}</span>
+                                        <span class="mx-1">→</span>
+                                        <span class="font-medium text-foreground">{{ item.current }}</span>
+                                    </p>
+                                    <p class="text-xs text-muted-foreground">{{ item.previous_reference }} → {{ item.current_reference }}</p>
+                                </li>
+                            </ul>
                         </CardContent>
                     </Card>
 

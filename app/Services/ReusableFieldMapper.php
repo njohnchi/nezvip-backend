@@ -37,14 +37,87 @@ class ReusableFieldMapper
      */
     public function forCaseReference(string $caseReference): array
     {
+        $fields = [];
+
+        foreach ($this->sourcesForCaseReference($caseReference) as $source) {
+            $fields = $this->merge($fields, $source['fields']);
+        }
+
+        return $fields;
+    }
+
+    /**
+     * Detect shared fields whose confirmed value changed between submissions.
+     *
+     * A later non-empty value that differs from the previously confirmed value
+     * is treated as a contradiction: both source records are preserved and the
+     * current value is flagged for internal clarification rather than silently
+     * replacing the earlier one. Materiality is not guessed — every change to a
+     * previously confirmed shared field is surfaced for an operator to confirm.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function contradictionsForCaseReference(string $caseReference): array
+    {
+        $confirmed = [];
+        $contradictions = [];
+
+        foreach ($this->sourcesForCaseReference($caseReference) as $source) {
+            foreach (self::SHARED_FIELDS as $key) {
+                $value = $source['fields'][$key] ?? null;
+
+                if (! is_string($value) || trim($value) === '') {
+                    continue;
+                }
+
+                $value = trim($value);
+                $previous = $confirmed[$key] ?? null;
+
+                if ($previous !== null && strcasecmp($previous['value'], $value) !== 0) {
+                    $contradictions[$key] = [
+                        'field' => $key,
+                        'previous' => $previous['value'],
+                        'previous_reference' => $previous['reference'],
+                        'previous_at' => $previous['at'],
+                        'current' => $value,
+                        'current_reference' => $source['reference'],
+                        'current_at' => $source['at'],
+                    ];
+                }
+
+                $confirmed[$key] = [
+                    'value' => $value,
+                    'reference' => $source['reference'],
+                    'at' => $source['at'],
+                ];
+            }
+        }
+
+        return array_values($contradictions);
+    }
+
+    /**
+     * Replay every submission and diagnostic for a case in chronological order.
+     *
+     * Records sharing a timestamp keep their insertion order (submissions then
+     * diagnostics, each by id), so the most recently created record wins ties.
+     *
+     * @return array<int, array{sort: int, sequence: int, reference: string, at: string|null, fields: array<string, mixed>}>
+     */
+    private function sourcesForCaseReference(string $caseReference): array
+    {
         $sources = [];
+        $sequence = 0;
 
         foreach (FormSubmission::query()
             ->where('case_reference', $caseReference)
             ->orderBy('created_at')
             ->get() as $submission) {
             $sources[] = [
-                'at' => $submission->created_at?->getTimestamp() ?? 0,
+                'sort' => $submission->created_at?->getTimestamp() ?? 0,
+                'sequence' => $sequence++,
+                'reference' => $submission->reference,
+                'at' => $submission->created_at?->toIso8601String(),
                 'fields' => $submission->data ?? [],
             ];
         }
@@ -54,20 +127,17 @@ class ReusableFieldMapper
             ->orderBy('created_at')
             ->get() as $diagnostic) {
             $sources[] = [
-                'at' => $diagnostic->created_at?->getTimestamp() ?? 0,
+                'sort' => $diagnostic->created_at?->getTimestamp() ?? 0,
+                'sequence' => $sequence++,
+                'reference' => $diagnostic->reference,
+                'at' => $diagnostic->created_at?->toIso8601String(),
                 'fields' => $this->diagnosticFields($diagnostic),
             ];
         }
 
-        usort($sources, fn (array $a, array $b): int => $a['at'] <=> $b['at']);
+        usort($sources, fn (array $a, array $b): int => $a['sort'] <=> $b['sort'] ?: $a['sequence'] <=> $b['sequence']);
 
-        $fields = [];
-
-        foreach ($sources as $source) {
-            $fields = $this->merge($fields, $source['fields']);
-        }
-
-        return $fields;
+        return $sources;
     }
 
     /**

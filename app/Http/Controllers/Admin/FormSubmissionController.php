@@ -5,12 +5,14 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\FormSubmission;
 use App\Services\CaseDiscoveryService;
+use App\Services\ReusableFieldMapper;
 use Illuminate\Http\Request;
 
 class FormSubmissionController extends Controller
 {
     public function __construct(
         public CaseDiscoveryService $caseDiscoveryService,
+        public ReusableFieldMapper $reusableFieldMapper,
     ) {}
 
     public function index(Request $request)
@@ -56,6 +58,9 @@ class FormSubmissionController extends Controller
             'submission' => $submission,
             'related' => $submission->case_reference
                 ? $this->caseDiscoveryService->relatedRecords($submission->case_reference, excludeSubmissionId: $submission->id)
+                : [],
+            'contradictions' => $submission->case_reference
+                ? $this->reusableFieldMapper->contradictionsForCaseReference($submission->case_reference)
                 : [],
         ]);
     }

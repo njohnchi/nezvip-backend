@@ -5,12 +5,14 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\VentureDiagnostic;
 use App\Services\CaseDiscoveryService;
+use App\Services\ReusableFieldMapper;
 use Illuminate\Http\Request;
 
 class VentureDiagnosticController extends Controller
 {
     public function __construct(
         public CaseDiscoveryService $caseDiscoveryService,
+        public ReusableFieldMapper $reusableFieldMapper,
     ) {}
 
     public function index()
@@ -39,6 +41,9 @@ class VentureDiagnosticController extends Controller
             'diagnostic' => $diagnostic,
             'related' => $diagnostic->case_reference
                 ? $this->caseDiscoveryService->relatedRecords($diagnostic->case_reference, excludeDiagnosticId: $diagnostic->id)
+                : [],
+            'contradictions' => $diagnostic->case_reference
+                ? $this->reusableFieldMapper->contradictionsForCaseReference($diagnostic->case_reference)
                 : [],
         ]);
     }
