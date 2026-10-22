@@ -91,7 +91,7 @@ class VentureDiagnosticController extends Controller
             // Budget & Timeline
             'budget_range' => 'required|string',
             'timeline' => 'required|string',
-            'proof_links' => 'required|array|min:1',
+            'proof_links' => 'nullable|array',
             'proof_links.*' => 'url',
             'sensitive_info_warning' => 'boolean',
 
