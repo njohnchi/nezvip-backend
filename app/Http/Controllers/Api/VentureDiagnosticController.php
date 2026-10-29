@@ -29,7 +29,7 @@ class VentureDiagnosticController extends Controller
     {
         $validator = Validator::make($request->all(), [
             // Intake metadata
-            'intake_type' => 'required|string',
+            'intake_type' => 'required|string|max:255',
             'full_name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
             'location' => 'required|string|max:255',
@@ -89,8 +89,8 @@ class VentureDiagnosticController extends Controller
             'declared_exclusions' => 'required|string',
 
             // Budget & Timeline
-            'budget_range' => 'required|string',
-            'timeline' => 'required|string',
+            'budget_range' => 'required|string|max:255',
+            'timeline' => 'required|string|max:255',
             'proof_links' => 'nullable|array',
             'proof_links.*' => 'url',
             'sensitive_info_warning' => 'boolean',

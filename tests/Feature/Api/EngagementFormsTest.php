@@ -311,3 +311,21 @@ it('stores the case reference and assisted marker on venture diagnostics', funct
     expect($diagnostic->operator_assisted)->toBeTrue();
     expect($diagnostic->case_reference)->toBe('VDS-000007');
 });
+
+it('stores long free-text answers that exceed the legacy varchar limit', function () {
+    Mail::fake();
+
+    $longAnswer = trim(str_repeat('Detailed customer and revenue context. ', 20));
+
+    $this->postJson('/api/v1/venture-diagnostic', [
+        ...ventureDiagnosticApiPayload(),
+        'primary_customer_type' => $longAnswer,
+        'revenue_model' => $longAnswer,
+    ])
+        ->assertCreated()
+        ->assertJsonPath('success', true);
+
+    $diagnostic = \App\Models\VentureDiagnostic::query()->firstOrFail();
+    expect($diagnostic->primary_customer_type)->toBe($longAnswer);
+    expect($diagnostic->revenue_model)->toBe($longAnswer);
+});
