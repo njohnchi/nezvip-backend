@@ -23,6 +23,7 @@ class ReusableFieldMapper
         'organization',
         'organization_name',
         'location',
+        'undertaking_name',
     ];
 
     /**

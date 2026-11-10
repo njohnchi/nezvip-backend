@@ -91,11 +91,17 @@ class FormSubmissionController extends Controller
                     'data.full_name' => 'required|string|max:255',
                     'data.email' => 'required|email|max:255',
                     'data.organization' => 'nullable|string|max:255',
-                    'data.architecture_type' => 'required|string|max:255',
+                    'data.undertaking_name' => 'required|string|max:255',
+                    'data.architecture_entry_path' => 'required|string|in:STANDALONE,DIAGNOSTIC_LED,UNDETERMINED',
+                    'data.architecture_request_type' => 'required|string|in:FULL_MASTER,SPECIFIC_SPECIALIST,RE_ARCHITECTURE,NEW_PROJECT,UNDETERMINED_SCOPE',
                     'data.undertaking_context' => 'required|string',
                     'data.scope_description' => 'required|string',
-                    'data.diagnostic_reference' => 'nullable|string|max:255',
+                    'data.expected_architecture_outcome' => 'required|string',
+                    'data.known_constraints_requirements' => 'nullable|string',
+                    'data.supporting_documents_links' => 'nullable|string',
+                    'data.diagnostic_reference' => 'nullable|string|max:255|required_if:data.architecture_entry_path,DIAGNOSTIC_LED',
                     'data.notes' => 'nullable|string',
+                    'data.authority_to_submit' => 'required|boolean',
                 ]);
 
             case 'program_brief_request':
@@ -247,11 +253,26 @@ class FormSubmissionController extends Controller
         $data = (array) ($request->input('data', []) ?? []);
 
         $requestedCaseReference = $this->requestedCaseReference($request, $data);
+        $resolvedCaseReference = $this->resolveCaseReference($request, $data);
+
+        // Flag case linkage as unconfirmed when a reference was requested but not verified.
+        // Undertakings are never auto-merged based on email/name/org matching.
+        if ($requestedCaseReference !== null && $resolvedCaseReference === null) {
+            $data['case_linkage_status'] = 'UNCONFIRMED';
+        }
+
+        // Processing states and all venture architecture form fields are stored
+        // dynamically in the `data` JSON column, consistent with all other
+        // service forms. No dedicated table columns are added.
+        $data['request_status'] = 'RECEIVED';
+        $data['engagement_authorization'] = 'NOT_VERIFIED';
+        $data['diagnostic_authorization'] = $this->diagnosticAuthorizationFor($data);
+        $data['processing_delivery_status'] = 'NOT_STARTED';
 
         $submission = FormSubmission::create([
             'form_type' => $formType,
             'data' => $data,
-            'case_reference' => $this->resolveCaseReference($request, $data),
+            'case_reference' => $resolvedCaseReference,
             'operator_assisted' => $this->isOperatorAssisted($request),
         ]);
 
@@ -293,11 +314,12 @@ class FormSubmissionController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Form submitted successfully',
+            'message' => $this->submissionMessage($formType),
             'data' => [
                 'id' => $submission->id,
                 'reference' => $reference,
                 'case_reference' => $submission->case_reference,
+                'submission_reference' => $submission->submission_reference,
                 'continuation_token' => $continuationToken,
             ],
         ], 201);
@@ -381,6 +403,21 @@ class FormSubmissionController extends Controller
 
         return collect($this->caseDiscoveryService->forEmail($verification->email))
             ->contains(fn (array $case) => $case['case_reference'] === $caseReference);
+    }
+
+    private function diagnosticAuthorizationFor(array $data): string
+    {
+        return (string) ($data['architecture_entry_path'] ?? '') === 'DIAGNOSTIC_LED'
+            ? 'NOT_VERIFIED'
+            : 'NOT_APPLICABLE';
+    }
+
+    private function submissionMessage(string $formType): string
+    {
+        return match ($formType) {
+            'venture_architecture_request' => 'Your Venture Architecture request has been received. Your undertaking and request have been recorded. We will contact you if additional information is needed.',
+            default => 'Form submitted successfully',
+        };
     }
 
     private function isOperatorAssisted(Request $request): bool

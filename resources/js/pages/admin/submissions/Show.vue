@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
-import { AlertCircle, ArrowLeft, Trash2 } from 'lucide-vue-next';
+import { ref } from 'vue';
+import { AlertCircle, ArrowLeft, Copy, Trash2 } from 'lucide-vue-next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -61,6 +62,123 @@ const referencePrefixes: Record<string, string> = {
 const getReference = (s: Submission) => `${referencePrefixes[s.form_type] || 'FS'}-${String(s.id).padStart(6, '0')}`;
 const renderValue = (v: any): string => Array.isArray(v) ? v.join(', ') : typeof v === 'object' && v !== null ? JSON.stringify(v, null, 2) : String(v);
 const formatFieldName = (k: string) => k.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+
+const copied = ref(false);
+
+const getValue = (v: any, missing = 'NOT PROVIDED'): string => {
+    if (v === null || v === undefined) return missing;
+    if (typeof v === 'string' && v.trim() === '') return missing;
+    if (Array.isArray(v)) return v.length === 0 ? missing : v.join(', ');
+    return String(v);
+};
+
+const formatSubmissionDateTime = (d: string) => {
+    return new Date(d).toLocaleString('en-GB', {
+        day: 'numeric', month: 'long', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+        timeZoneName: 'short'
+    });
+};
+
+const generateSubmissionDataText = (): string => {
+    const s = props.submission;
+    const data = s.data || {};
+    const lines: string[] = [];
+
+    lines.push('SUBMISSION DATA — VENTURE ARCHITECTURE');
+    lines.push(`Submission Reference: ${getReference(s)}`);
+    lines.push(`Case Reference: ${getValue(s.case_reference, 'NOT PROVIDED')}`);
+    lines.push(`Submitted At: ${formatSubmissionDateTime(s.created_at)}`);
+    lines.push('Service: Venture Architecture Request');
+    lines.push(`Request Status: ${getValue(data.request_status, 'UNKNOWN')}`);
+    lines.push(`Full Name: ${getValue(data.full_name, 'NOT PROVIDED')}`);
+    lines.push(`Email: ${getValue(data.email, 'NOT PROVIDED')}`);
+    lines.push(`Organization: ${getValue(data.organization, 'NOT PROVIDED')}`);
+    lines.push(`Undertaking / Venture / Project Name: ${getValue(data.undertaking_name, 'NOT PROVIDED')}`);
+    const caseLinkage = data.case_linkage_status === 'UNCONFIRMED' ? 'UNCONFIRMED' : (s.case_reference ? 'VERIFIED' : 'UNKNOWN');
+    lines.push(`Case Linkage Status: ${caseLinkage}`);
+    lines.push(`Architecture Entry Path: ${getValue(data.architecture_entry_path, 'UNKNOWN')}`);
+    lines.push(`Architecture Request Type: ${getValue(data.architecture_request_type, 'UNKNOWN')}`);
+    lines.push(`Undertaking Context: ${getValue(data.undertaking_context, 'NOT PROVIDED')}`);
+    lines.push(`Requested Design Work / Scope: ${getValue(data.scope_description, 'NOT PROVIDED')}`);
+    lines.push(`Expected Architecture Outcome: ${getValue(data.expected_architecture_outcome, 'NOT PROVIDED')}`);
+    lines.push(`Known Constraints / Requirements: ${getValue(data.known_constraints_requirements, 'NOT PROVIDED')}`);
+    lines.push(`Notes: ${getValue(data.notes, 'NOT PROVIDED')}`);
+
+    const supportingDocs = data.supporting_documents_links;
+    const supportingDocsText = supportingDocs && (Array.isArray(supportingDocs) ? supportingDocs.length > 0 : String(supportingDocs).trim() !== '')
+        ? (Array.isArray(supportingDocs) ? supportingDocs.join(', ') : String(supportingDocs))
+        : 'NONE';
+    lines.push(`Supporting Document / Link References: ${supportingDocsText}`);
+
+    const relatedRefs = props.related.map(r => r.reference).filter(Boolean);
+    lines.push(`Related Case / Prior Submission References: ${relatedRefs.length > 0 ? relatedRefs.join(', ') : 'NONE'}`);
+
+    const authoritySubmitted = data.authority_to_submit;
+    const authorityAt = data.authority_to_submit_at;
+    let authorityText: string;
+    if (authoritySubmitted === true) {
+        authorityText = `Yes${authorityAt ? ` (${formatSubmissionDateTime(authorityAt)})` : ''}`;
+    } else if (authoritySubmitted === false) {
+        authorityText = 'No';
+    } else {
+        authorityText = 'NOT PROVIDED';
+    }
+    lines.push(`Authority to Submit Declaration: ${authorityText}`);
+
+    const engagementAuth = data.engagement_authorization;
+    lines.push(`Engagement Authorization: ${engagementAuth === 'NOT_VERIFIED' ? 'NOT VERIFIED' : getValue(engagementAuth, 'NOT VERIFIED')}`);
+
+    const diagnosticAuth = data.diagnostic_authorization;
+    const diagnosticRef = data.diagnostic_reference;
+    let diagnosticText: string;
+    if (diagnosticAuth === 'NOT_APPLICABLE') {
+        diagnosticText = 'NOT APPLICABLE';
+    } else if (diagnosticAuth === 'VERIFIED' && diagnosticRef) {
+        diagnosticText = `VERIFIED (ref: ${diagnosticRef})`;
+    } else {
+        diagnosticText = getValue(diagnosticAuth, 'NOT APPLICABLE');
+    }
+    lines.push(`Diagnostic Architecture Authorization: ${diagnosticText}`);
+
+    const correctionRefs: string[] = [];
+    props.contradictions.forEach(c => {
+        if (c.previous_reference) correctionRefs.push(c.previous_reference);
+        if (c.current_reference) correctionRefs.push(c.current_reference);
+    });
+    lines.push(`Clarification / Correction References: ${correctionRefs.length > 0 ? correctionRefs.join(', ') : 'NONE'}`);
+
+    const deliveryStatus = data.processing_delivery_status;
+    lines.push(`Document / Delivery Status: ${getValue(deliveryStatus, 'NONE')}`);
+
+    return lines.join('\n');
+};
+
+const copySubmissionData = async () => {
+    const text = generateSubmissionDataText();
+    try {
+        await navigator.clipboard.writeText(text);
+        copied.value = true;
+        setTimeout(() => { copied.value = false; }, 2000);
+    } catch {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        try {
+            document.execCommand('copy');
+            copied.value = true;
+            setTimeout(() => { copied.value = false; }, 2000);
+        } catch {
+            alert('Failed to copy submission data.');
+        } finally {
+            document.body.removeChild(textarea);
+        }
+    }
+};
 </script>
 <template>
     <Head :title="`Submission: ${getFormTypeLabel(submission.form_type)}`" />
@@ -78,6 +196,10 @@ const formatFieldName = (k: string) => k.split('_').map(w => w.charAt(0).toUpper
                     <Badge>{{ getFormTypeLabel(submission.form_type) }}</Badge>
                     <Badge :variant="submission.status === 'contacted' ? 'default' : 'secondary'">{{ submission.status }}</Badge>
                     <Badge v-if="submission.operator_assisted" variant="outline">Operator-assisted</Badge>
+                    <Button variant="outline" @click="copySubmissionData">
+                        <Copy class="h-4 w-4 mr-2" />
+                        {{ copied ? 'Copied!' : 'Copy Submission Data' }}
+                    </Button>
                     <Button variant="destructive" size="icon" @click="deleteSubmission"><Trash2 class="h-4 w-4" /></Button>
                 </div>
             </div>
