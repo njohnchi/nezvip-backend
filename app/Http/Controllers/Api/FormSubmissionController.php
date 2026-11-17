@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\VentureArchitectureRequestRequest;
 use App\Models\EmailTemplate;
 use App\Models\FormSubmission;
 use App\Services\AcknowledgementEmailService;
@@ -234,14 +235,27 @@ class FormSubmissionController extends Controller
     public function store(Request $request)
     {
         $formType = $request->input('form_type');
-        $rules = array_merge($this->getValidationRules($formType), [
-            'case_reference' => 'nullable|string|max:60',
-            'continuation_token' => 'nullable|string|max:120',
-            'operator_assisted' => 'sometimes|boolean',
-            'assisted_intake_key' => 'sometimes|string',
-        ]);
 
-        $validator = Validator::make($request->all(), $rules);
+        if ($formType === 'venture_architecture_request') {
+            $formRequest = new VentureArchitectureRequestRequest;
+            $rules = array_merge($formRequest->rules(), [
+                'case_reference' => 'nullable|string|max:60',
+                'continuation_token' => 'nullable|string|max:120',
+                'operator_assisted' => 'sometimes|boolean',
+                'assisted_intake_key' => 'sometimes|string',
+            ]);
+            $messages = $formRequest->messages();
+        } else {
+            $rules = array_merge($this->getValidationRules($formType), [
+                'case_reference' => 'nullable|string|max:60',
+                'continuation_token' => 'nullable|string|max:120',
+                'operator_assisted' => 'sometimes|boolean',
+                'assisted_intake_key' => 'sometimes|string',
+            ]);
+            $messages = [];
+        }
+
+        $validator = Validator::make($request->all(), $rules, $messages);
 
         if ($validator->fails()) {
             return response()->json([
